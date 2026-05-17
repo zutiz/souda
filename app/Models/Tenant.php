@@ -10,6 +10,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Carbon;
+use Stancl\Tenancy\Contracts\TenantWithDatabase;
+use Stancl\Tenancy\Database\Concerns\HasDatabase;
 use Stancl\Tenancy\Database\Models\Tenant as BaseTenant;
 use Stancl\Tenancy\Database\TenantCollection;
 
@@ -23,10 +25,10 @@ use Stancl\Tenancy\Database\TenantCollection;
  * @property Carbon|null $deleted_at
  * @property array<string, mixed> $data
  */
-class Tenant extends BaseTenant
+class Tenant extends BaseTenant implements TenantWithDatabase
 {
     /** @use HasFactory<TenantFactory> */
-    use HasFactory, SoftDeletes;
+    use HasDatabase, HasFactory, SoftDeletes;
 
     public static function getCustomColumns(): array
     {
@@ -46,6 +48,17 @@ class Tenant extends BaseTenant
         return [
             'trial_ends_at' => 'datetime',
         ];
+    }
+
+    /**
+     * The database name for this tenant.
+     *
+     * In multi-DB mode, each tenant gets their own database named souda_tenant_{uuid}.
+     * The package uses this method to determine the database name when initializing tenancy.
+     */
+    public function getDatabaseName(): string
+    {
+        return 'souda_tenant_'.$this->id;
     }
 
     public function user(): HasOne

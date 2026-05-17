@@ -8,13 +8,15 @@ use Illuminate\Contracts\Http\Kernel;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\ServiceProvider;
+use Stancl\JobPipeline\JobPipeline;
+use Stancl\Tenancy\Contracts\TenantWithDatabase;
 use Stancl\Tenancy\Events;
+use Stancl\Tenancy\Jobs;
 use Stancl\Tenancy\Listeners;
 use Stancl\Tenancy\Middleware;
 
 class TenancyServiceProvider extends ServiceProvider
 {
-    // By default, no namespace is used to support the callable array syntax.
     public static string $controllerNamespace = '';
 
     public function events(): array
@@ -22,13 +24,33 @@ class TenancyServiceProvider extends ServiceProvider
         return [
             // Tenant events
             Events\CreatingTenant::class => [],
-            Events\TenantCreated::class => [],
+            Events\TenantCreated::class => [
+                JobPipeline::make([
+                    Jobs\CreateDatabase::class,
+                    Jobs\MigrateDatabase::class,
+                ])->send(function (Events\TenantCreated $event) {
+                    return $event->tenant;
+                })->shouldBeQueued(false),
+            ],
+
             Events\SavingTenant::class => [],
             Events\TenantSaved::class => [],
             Events\UpdatingTenant::class => [],
             Events\TenantUpdated::class => [],
             Events\DeletingTenant::class => [],
-            Events\TenantDeleted::class => [],
+            Events\TenantDeleted::class => [
+                function (Events\TenantDeleted $event): void {
+                    $tenant = $event->tenant;
+
+                    if ($tenant instanceof TenantWithDatabase) {
+                        $manager = $tenant->database()->manager();
+
+                        if ($manager->databaseExists($tenant->database()->getName())) {
+                            $manager->deleteDatabase($tenant);
+                        }
+                    }
+                },
+            ],
 
             // Domain events
             Events\CreatingDomain::class => [],
@@ -67,8 +89,6 @@ class TenancyServiceProvider extends ServiceProvider
             Events\SyncedResourceSaved::class => [
                 Listeners\UpdateSyncedResource::class,
             ],
-
-            // Fired only when a synced resource is changed in a different DB than the origin DB (to avoid infinite loops)
             Events\SyncedResourceChangedInForeignDatabase::class => [],
         ];
     }
@@ -82,7 +102,6 @@ class TenancyServiceProvider extends ServiceProvider
     {
         $this->bootEvents();
         $this->mapRoutes();
-
         $this->makeTenancyMiddlewareHighestPriority();
     }
 
@@ -90,6 +109,10 @@ class TenancyServiceProvider extends ServiceProvider
     {
         foreach ($this->events() as $event => $listeners) {
             foreach ($listeners as $listener) {
+                if ($listener instanceof JobPipeline) {
+                    $listener = $listener->toListener();
+                }
+
                 Event::listen($event, $listener);
             }
         }

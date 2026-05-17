@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Models\Tenant;
 use Stancl\Tenancy\Bootstrappers\CacheTenancyBootstrapper;
+use Stancl\Tenancy\Bootstrappers\DatabaseTenancyBootstrapper;
 use Stancl\Tenancy\Bootstrappers\FilesystemTenancyBootstrapper;
 use Stancl\Tenancy\Bootstrappers\QueueTenancyBootstrapper;
 use Stancl\Tenancy\Database\Models\Domain;
@@ -17,11 +18,15 @@ return [
     'id_generator' => UUIDGenerator::class,
 
     /**
-     * Lite mode supports single-db tenancy only.
+     * Multi-database tenancy mode.
      *
-     * All tenants share one database, isolated by tenant_id columns.
+     * Each tenant gets their own database, providing full data isolation.
+     * Central tables (users, billing, plans, settings) live in the central database.
+     * Tenant operational data (tasks, future products/orders) lives in per-tenant databases.
+     *
+     * Database naming: souda_tenant_{uuid}
      */
-    'mode' => 'single_db',
+    'mode' => 'multi',
 
     'domain_model' => Domain::class,
 
@@ -42,6 +47,7 @@ return [
      * To configure their behavior, see the config keys below.
      */
     'bootstrappers' => [
+        DatabaseTenancyBootstrapper::class,
         CacheTenancyBootstrapper::class,
         FilesystemTenancyBootstrapper::class,
         QueueTenancyBootstrapper::class,
@@ -52,23 +58,25 @@ return [
      * Database tenancy config. Used by DatabaseTenancyBootstrapper.
      */
     'database' => [
-        'central_connection' => env('DB_CONNECTION', 'central'),
+        'central_connection' => env('CENTRAL_DB_CONNECTION', 'central'),
 
         /**
          * Connection used as a "template" for the dynamically created tenant database connection.
-         * Note: don't name your template connection tenant. That name is reserved by package.
+         * The package clones this connection and overrides the database name with the tenant's DB name.
+         * Note: don't name your template connection 'tenant'. That name is reserved by the package.
          */
-        'template_tenant_connection' => null,
+        'template_tenant_connection' => env('TENANT_DB_CONNECTION_TEMPLATE', 'mysql'),
 
         /**
-         * Tenant database names are created like this:
-         * prefix + tenant_id + suffix.
+         * Tenant database naming: prefix + tenant_id + suffix.
+         * Results in: souda_tenant_{uuid}
          */
-        'prefix' => 'tenant',
+        'prefix' => env('TENANT_DB_PREFIX', 'souda_tenant_'),
         'suffix' => '',
 
         /**
-         * TenantDatabaseManagers are classes that handle the creation & deletion of tenant databases.
+         * TenantDatabaseManagers handle the creation & deletion of tenant databases.
+         * Using the standard MySQL manager which creates databases with default credentials.
          */
         'managers' => [
             'sqlite' => SQLiteDatabaseManager::class,
@@ -196,17 +204,18 @@ return [
     /**
      * Parameters used by the tenants:migrate command.
      *
-     * Lite mode uses shared-database tenancy, so no tenant migration path is configured.
+     * In multi-DB mode, tenant migrations live in database/migrations/tenant/.
+     * These run automatically when a tenant database is created via tenancy()->create().
      */
     'migration_parameters' => [
-        '--force' => true, // This needs to be true to run migrations in production.
+        '--force' => true,
     ],
 
     /**
      * Parameters used by the tenants:seed command.
      */
     'seeder_parameters' => [
-        '--class' => 'DatabaseSeeder', // root seeder class
-        // '--force' => true, // This needs to be true to seed tenant databases in production
+        '--class' => 'TenantDatabaseSeeder',
+        '--force' => true,
     ],
 ];

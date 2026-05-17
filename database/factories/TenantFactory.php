@@ -27,6 +27,18 @@ class TenantFactory extends Factory
         ];
     }
 
+    /**
+     * Configure the factory to bootstrap the tenant database after creation.
+     *
+     * In multi-DB mode, each tenant gets their own database automatically.
+     * The TenantCreated event listener (CreateDatabase + MigrateDatabase jobs)
+     * handles the database creation and migration whenever a Tenant is created.
+     */
+    public function configure(): static
+    {
+        return $this;
+    }
+
     public function subscribed(): static
     {
         return $this->afterCreating(function (Tenant $tenant) {
