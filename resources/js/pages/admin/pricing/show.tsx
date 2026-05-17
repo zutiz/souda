@@ -10,16 +10,14 @@ import {
 } from 'lucide-react';
 import { useState } from 'react';
 import {
-    store as storePrice,
-    update as updatePrice,
-    destroy as destroyPrice,
-} from '@/actions/App/Http/Controllers/Admin/StripePriceController';
-import {
     index,
     show,
     edit,
+    storePrice,
+    updatePrice,
+    destroyPrice,
     updateFeatures,
-} from '@/actions/App/Http/Controllers/Admin/StripePricingController';
+} from '@/actions/App/Http/Controllers/Admin/PlanController';
 import Heading from '@/components/heading';
 import InputError from '@/components/input-error';
 import { Badge } from '@/components/ui/badge';

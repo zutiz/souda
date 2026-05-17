@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 use App\Http\Controllers\BillingController;
 use App\Http\Controllers\TaskController;
-use App\Http\Middleware\EnsureSubscribed;
 use App\Http\Middleware\InitializeTenancyByUser;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -22,10 +21,12 @@ use Inertia\Inertia;
 
 Route::middleware(['web', 'auth', InitializeTenancyByUser::class])->group(function () {
     Route::get('/billing', [BillingController::class, 'index'])->name('billing');
-    Route::post('/billing/checkout', [BillingController::class, 'checkout'])->name('billing.checkout');
-    Route::post('/billing/portal', [BillingController::class, 'portal'])->name('billing.portal');
+    Route::post('/billing/subscribe', [BillingController::class, 'subscribe'])->name('billing.subscribe');
+    Route::post('/billing/cancel', [BillingController::class, 'cancel'])->name('billing.cancel');
+    Route::get('/billing/invoices', [BillingController::class, 'invoices'])->name('billing.invoices');
+    Route::get('/billing/callback/{gateway}', [BillingController::class, 'callback'])->name('billing.callback');
 
-    Route::middleware(EnsureSubscribed::class)->group(function () {
+    Route::middleware('subscription')->group(function () {
         Route::get('/dashboard', function () {
             return Inertia::render('dashboard');
         })->name('dashboard');

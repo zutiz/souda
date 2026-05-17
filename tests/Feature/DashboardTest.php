@@ -20,4 +20,3 @@ test('subscribed users can visit the dashboard', function () {
     $response = $this->actingAs($user)->get(route('dashboard'));
     $response->assertOk();
 });
-

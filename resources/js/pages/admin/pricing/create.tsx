@@ -2,7 +2,7 @@ import { Form, Head } from '@inertiajs/react';
 import {
     index,
     store,
-} from '@/actions/App/Http/Controllers/Admin/StripePricingController';
+} from '@/actions/App/Http/Controllers/Admin/PlanController';
 import Heading from '@/components/heading';
 import InputError from '@/components/input-error';
 import { Button } from '@/components/ui/button';
@@ -24,7 +24,7 @@ export default function CreatePricing() {
             <div className="mx-auto w-full max-w-2xl space-y-6 p-4 sm:p-6">
                 <Heading
                     title="Create Product"
-                    description="Add a new Stripe product for your subscription plans."
+                    description="Create a new subscription plan."
                 />
 
                 <Form
@@ -63,7 +63,7 @@ export default function CreatePricing() {
                             <div className="flex items-center gap-3">
                                 <Button type="submit" disabled={processing}>
                                     {processing && <Spinner />}
-                                    Create Product
+Create Plan
                                 </Button>
                                 <Button type="button" variant="outline" asChild>
                                     <a href={index().url}>Cancel</a>

@@ -3,7 +3,7 @@ import {
     index,
     show,
     update,
-} from '@/actions/App/Http/Controllers/Admin/StripePricingController';
+} from '@/actions/App/Http/Controllers/Admin/PlanController';
 import Heading from '@/components/heading';
 import InputError from '@/components/input-error';
 import { Button } from '@/components/ui/button';
@@ -58,7 +58,7 @@ export default function EditPricing({ product }: Props) {
             <div className="mx-auto w-full max-w-2xl space-y-6 p-4 sm:p-6">
                 <Heading
                     title={`Edit Product: ${product.name}`}
-                    description="Update this Stripe product's details."
+                    description="Update this plan's details."
                 />
 
                 <form

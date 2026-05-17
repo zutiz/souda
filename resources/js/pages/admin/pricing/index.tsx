@@ -16,7 +16,7 @@ import {
     destroy,
     update,
     reorder,
-} from '@/actions/App/Http/Controllers/Admin/StripePricingController';
+} from '@/actions/App/Http/Controllers/Admin/PlanController';
 import Heading from '@/components/heading';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -133,7 +133,7 @@ export default function PricingIndex({ products }: Props) {
                 <div className="flex items-center justify-between">
                     <Heading
                         title="Pricing"
-                        description="Manage your Stripe subscription products and prices."
+                        description="Manage your subscription plans and pricing."
                     />
                     <Button asChild>
                         <Link href={create().url}>

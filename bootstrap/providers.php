@@ -1,7 +1,13 @@
 <?php
 
+use App\Providers\AppServiceProvider;
+use App\Providers\BillingServiceProvider;
+use App\Providers\FortifyServiceProvider;
+use App\Providers\TenancyServiceProvider;
+
 return [
-    App\Providers\AppServiceProvider::class,
-    App\Providers\FortifyServiceProvider::class,
-    App\Providers\TenancyServiceProvider::class,
+    AppServiceProvider::class,
+    FortifyServiceProvider::class,
+    TenancyServiceProvider::class,
+    BillingServiceProvider::class,
 ];

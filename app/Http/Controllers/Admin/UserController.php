@@ -3,8 +3,9 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Models\PlanPrice;
 use App\Models\User;
+use App\Modules\Billing\Enums\SubscriptionStatus;
+use App\Modules\Billing\Services\SubscriptionService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -13,6 +14,10 @@ use Inertia\Response;
 
 class UserController extends Controller
 {
+    public function __construct(
+        private readonly SubscriptionService $subscriptionService,
+    ) {}
+
     public function index(): Response
     {
         $excludeAdmins = fn ($query) => $query->whereDoesntHave('roles', fn ($q) => $q->where('name', 'admin'));
@@ -28,33 +33,22 @@ class UserController extends Controller
             ->latest('deleted_at')
             ->get();
 
-        $allUsers = $active->getCollection()->merge($deactivated);
-        $stripePriceIds = $allUsers
-            ->map(fn (User $user) => $user->tenant?->subscription()?->stripe_price)
-            ->filter()
-            ->unique()
-            ->values();
-
-        $priceMap = PlanPrice::with('plan')
-            ->whereIn('stripe_id', $stripePriceIds)
-            ->get()
-            ->keyBy('stripe_id');
-
-        $mapUser = function (User $user) use ($priceMap) {
+        $mapUser = function (User $user) {
             $tenant = $user->tenant;
             $isTrashed = $user->trashed();
-            $subscription = $tenant?->subscription();
+            $subscription = $tenant?->activeSubscription();
 
             $status = 'inactive';
             $planName = null;
 
-            if ($subscription?->active()) {
-                $status = $subscription->onTrial() ? 'trialing' : 'active';
-
-                if ($subscription->stripe_price && isset($priceMap[$subscription->stripe_price])) {
-                    $planName = $priceMap[$subscription->stripe_price]->plan->name;
+            if ($subscription) {
+                if ($subscription->status === SubscriptionStatus::Active) {
+                    $status = 'active';
+                } elseif ($subscription->onTrial()) {
+                    $status = 'trialing';
                 }
-            } elseif (! $isTrashed && $tenant?->onGenericTrial()) {
+                $planName = $subscription->plan?->name;
+            } elseif (! $isTrashed && $tenant?->trial_ends_at?->isFuture()) {
                 $status = 'trialing';
             }
 
@@ -85,49 +79,30 @@ class UserController extends Controller
         abort_if($user->hasRole('admin'), 403, 'Admin users cannot be managed.');
 
         $tenant = $user->tenant;
-        $subscription = $tenant?->subscription();
+        $subscription = $tenant?->activeSubscription();
         $isDeactivated = $user->trashed();
 
         $subscriptionData = null;
 
         if ($subscription) {
-            $planName = null;
-            $priceName = null;
-            $interval = null;
-
-            if ($subscription->stripe_price) {
-                $planPrice = PlanPrice::with('plan')
-                    ->where('stripe_id', $subscription->stripe_price)
-                    ->first();
-
-                if ($planPrice) {
-                    $planName = $planPrice->plan->name;
-                    $priceName = $planPrice->nickname;
-                    $interval = $planPrice->interval;
-                }
-            }
+            $plan = $subscription->plan;
 
             $subscriptionData = [
-                'stripe_status' => $subscription->stripe_status,
-                'stripe_price' => $subscription->stripe_price,
-                'plan_name' => $planName,
-                'price_name' => $priceName,
-                'interval' => $interval,
+                'status' => $subscription->status->value,
+                'gateway' => $subscription->gateway,
+                'plan_name' => $plan?->name,
+                'billing_cycle' => $subscription->billing_cycle->value,
+                'amount' => $subscription->amount,
                 'on_trial' => $subscription->onTrial(),
                 'trial_ends_at' => $subscription->trial_ends_at?->toISOString(),
-                'on_grace_period' => $subscription->onGracePeriod(),
-                'ends_at' => $subscription->ends_at?->toISOString(),
-                'active' => $subscription->active(),
-                'cancelled' => $subscription->canceled(),
-                'current_period_start' => $subscription->current_period_start?->toISOString(),
-                'current_period_end' => $subscription->current_period_end?->toISOString(),
+                'expires_at' => $subscription->expires_at?->toISOString(),
+                'cancelled_at' => $subscription->cancelled_at?->toISOString(),
+                'is_accessible' => $subscription->isAccessible(),
+                'is_cancelled' => $subscription->status === SubscriptionStatus::Cancelled,
+                'starts_at' => $subscription->starts_at?->toISOString(),
                 'created_at' => $subscription->created_at->toISOString(),
             ];
         }
-
-        $stripeUrl = $tenant?->stripe_id
-            ? 'https://dashboard.stripe.com/customers/'.$tenant->stripe_id
-            : null;
 
         return Inertia::render('admin/users/show', [
             'user' => [
@@ -142,16 +117,12 @@ class UserController extends Controller
             ],
             'tenant' => $tenant ? [
                 'id' => $tenant->id,
-                'stripe_id' => $tenant->stripe_id,
-                'pm_type' => $tenant->pm_type,
-                'pm_last_four' => $tenant->pm_last_four,
-                'on_generic_trial' => ! $isDeactivated && $tenant->onGenericTrial(),
+                'on_generic_trial' => ! $isDeactivated && $tenant->trial_ends_at?->isFuture(),
                 'generic_trial_ends_at' => $tenant->trial_ends_at?->toISOString(),
                 'created_at' => $tenant->created_at->toISOString(),
                 'updated_at' => $tenant->updated_at->toISOString(),
             ] : null,
             'subscription' => $subscriptionData,
-            'stripe_url' => $stripeUrl,
         ]);
     }
 
@@ -162,9 +133,9 @@ class UserController extends Controller
         abort_if($user->hasRole('admin'), 403, 'Admin users cannot be deactivated.');
 
         $tenant = $user->tenant;
-        $subscription = $tenant?->subscription();
-        if ($subscription?->active()) {
-            $subscription->cancelNow();
+        $subscription = $tenant?->activeSubscription();
+        if ($subscription) {
+            $this->subscriptionService->cancelSubscription($subscription);
         }
 
         $user->delete();
@@ -208,9 +179,9 @@ class UserController extends Controller
         abort_if($user->hasRole('admin'), 403, 'Admin users cannot be deleted.');
 
         $tenant = $user->tenant;
-        $subscription = $tenant?->subscription();
-        if ($subscription?->active()) {
-            $subscription->cancelNow();
+        $subscription = $tenant?->activeSubscription();
+        if ($subscription) {
+            $this->subscriptionService->cancelSubscription($subscription);
         }
 
         $user->forceDelete();

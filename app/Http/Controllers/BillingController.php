@@ -2,10 +2,14 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Plan;
-use App\Models\PlanPrice;
 use App\Models\Tenant;
-use Carbon\Carbon;
+use App\Modules\Billing\Enums\BillingCycle;
+use App\Modules\Billing\Enums\SubscriptionStatus;
+use App\Modules\Billing\Models\Subscription;
+use App\Modules\Billing\Services\InvoiceService;
+use App\Modules\Billing\Services\PaymentService;
+use App\Modules\Billing\Services\PlanService;
+use App\Modules\Billing\Services\SubscriptionService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -13,263 +17,191 @@ use Inertia\Response;
 
 class BillingController extends Controller
 {
+    use TransformsPlansForFrontend;
+
+    public function __construct(
+        private readonly SubscriptionService $subscriptionService,
+        private readonly PlanService $planService,
+        private readonly InvoiceService $invoiceService,
+        private readonly PaymentService $paymentService,
+    ) {}
+
     public function index(Request $request): Response
     {
         /** @var Tenant $tenant */
         $tenant = tenant();
-        $subscription = $tenant->subscription();
 
-        if (! $subscription?->active() && $request->filled('session_id')) {
-            try {
-                $session = $tenant->stripe()->checkout->sessions->retrieve($request->string('session_id'));
-                $stripeSubscriptionId = $session->subscription;
+        $subscription = $this->subscriptionService->getTenantSubscription($tenant->id);
 
-                if ($stripeSubscriptionId && ! $tenant->subscriptions()->where('stripe_id', $stripeSubscriptionId)->exists()) {
-                    $stripeSub = $tenant->stripe()->subscriptions->retrieve($stripeSubscriptionId, ['expand' => ['items']]);
+        $latestSubscription = Subscription::forTenant($tenant->id)
+            ->latest('id')
+            ->first();
 
-                    $subAttributes = [
-                        'type' => 'default',
-                        'stripe_id' => $stripeSub->id,
-                        'stripe_status' => $stripeSub->status,
-                        'stripe_price' => $stripeSub->items->data[0]->price->id ?? null,
-                        'quantity' => $stripeSub->items->data[0]->quantity ?? null,
-                        'trial_ends_at' => $stripeSub->trial_end ? Carbon::createFromTimestamp($stripeSub->trial_end) : null,
-                        'ends_at' => null,
-                        'current_period_start' => $stripeSub->current_period_start ? Carbon::createFromTimestamp($stripeSub->current_period_start) : null,
-                        'current_period_end' => $stripeSub->current_period_end ? Carbon::createFromTimestamp($stripeSub->current_period_end) : null,
-                    ];
+        $displaySubscription = $subscription ?? $latestSubscription;
 
-                    if ($subscription) {
-                        $subscription->items()->delete();
-                        $subscription->update($subAttributes);
-                        $localSub = $subscription->fresh();
-                    } else {
-                        $localSub = $tenant->subscriptions()->create($subAttributes);
-                    }
-
-                    foreach ($stripeSub->items->data as $item) {
-                        $localSub->items()->create([
-                            'stripe_id' => $item->id,
-                            'stripe_product' => $item->price->product,
-                            'stripe_price' => $item->price->id,
-                            'quantity' => $item->quantity ?? null,
-                        ]);
-                    }
-
-                    $subscription = $localSub;
-                }
-            } catch (\Throwable) {
-                // Bad or expired session ID — continue without sync
-            }
-        }
-
-        $dbPlans = Plan::active()
-            ->ordered()
-            ->with('activePrices')
-            ->get();
-
-        $plans = [];
-        $currentPlanName = null;
-        $currentPrice = null;
-        $currentFeatures = [];
-
-        $subscribedPriceIds = [];
-        if ($subscription) {
-            $subscribedPriceIds = $subscription->items->pluck('stripe_price')->all();
-            if ($subscription->stripe_price) {
-                $subscribedPriceIds[] = $subscription->stripe_price;
-            }
-            $subscribedPriceIds = array_unique($subscribedPriceIds);
-        }
-
-        foreach ($dbPlans as $plan) {
-            if ($plan->activePrices->isEmpty()) {
-                continue;
-            }
-
-            $planPrices = $plan->activePrices->map(fn (PlanPrice $price) => [
-                'id' => $price->stripe_id,
-                'unit_amount' => $price->unit_amount,
-                'currency' => $price->currency,
-                'interval' => $price->interval,
-                'interval_count' => $price->interval_count,
-                'nickname' => $price->nickname,
-            ])->values()->all();
-
-            $metadata = [
-                'popular' => $plan->popular ? 'true' : '',
-                'cta' => $plan->cta ?? '',
-                'trial_enabled' => $plan->trial_enabled ? 'true' : '',
-                'trial_days' => $plan->trial_days ? (string) $plan->trial_days : '',
-                'trial_without_card' => $plan->trial_without_card ? 'true' : '',
-            ];
-
-            foreach ($plan->features ?? [] as $index => $feature) {
-                $metadata["feature_{$index}"] = $feature;
-            }
-
-            $plans[] = [
-                'id' => $plan->stripe_id,
-                'name' => $plan->name,
-                'description' => $plan->description,
-                'metadata' => $metadata,
-                'display_order' => $plan->display_order,
-                'prices' => $planPrices,
-            ];
-
-            if ($subscription && ! empty($subscribedPriceIds)) {
-                $matchingPrice = $plan->activePrices->first(fn (PlanPrice $p) => in_array($p->stripe_id, $subscribedPriceIds, true));
-                if ($matchingPrice) {
-                    $currentPlanName = $plan->name;
-                    $basePrice = $plan->activePrices->firstWhere('stripe_id', $matchingPrice->stripe_id)
-                        ?? $plan->activePrices->first();
-                    if ($basePrice) {
-                        $currentPrice = [
-                            'unit_amount' => $basePrice->unit_amount,
-                            'currency' => $basePrice->currency,
-                            'interval' => $basePrice->interval,
-                        ];
-                    }
-                    $currentFeatures = $plan->features ?? [];
-                }
-            }
-        }
+        $dbPlans = $this->planService->getActivePlans();
+        $plans = $this->transformPlans($dbPlans);
 
         $subscriptionData = null;
+        if ($displaySubscription) {
+            $plan = $displaySubscription->plan;
+            $status = $displaySubscription->status;
 
-        if ($subscription) {
+            // Map to values the frontend subscription type expects
             $subscriptionData = [
-                'stripe_status' => $subscription->stripe_status,
-                'stripe_price' => $subscription->stripe_price,
-                'plan_name' => $currentPlanName,
-                'on_trial' => $subscription->onTrial(),
-                'trial_ends_at' => $subscription->trial_ends_at?->toISOString(),
-                'on_grace_period' => $subscription->onGracePeriod(),
-                'ends_at' => $subscription->ends_at?->toISOString(),
-                'active' => $subscription->active(),
-                'cancelled' => $subscription->canceled(),
-                'current_price' => $currentPrice,
-                'current_period_start' => $subscription->current_period_start?->toISOString(),
-                'current_period_end' => $subscription->current_period_end?->toISOString(),
-                'created_at' => $subscription->created_at->toISOString(),
-                'features' => $currentFeatures,
+                'stripe_status' => $status->value,
+                'stripe_price' => $plan ? 'plan_'.$plan->id : null,
+                'plan_name' => $plan?->name,
+                'on_trial' => $displaySubscription->onTrial(),
+                'trial_ends_at' => $displaySubscription->trial_ends_at?->toISOString(),
+                'on_grace_period' => $status === SubscriptionStatus::Grace,
+                'ends_at' => $displaySubscription->expires_at?->toISOString(),
+                'active' => $status === SubscriptionStatus::Active,
+                'cancelled' => $status === SubscriptionStatus::Cancelled,
+                'current_price' => $plan ? [
+                    'unit_amount' => $displaySubscription->amount,
+                    'currency' => $displaySubscription->currency,
+                    'interval' => $displaySubscription->billing_cycle->value,
+                ] : null,
+                'current_period_start' => $displaySubscription->starts_at?->toISOString(),
+                'current_period_end' => $displaySubscription->expires_at?->toISOString(),
+                'next_billing_at' => $displaySubscription->next_billing_at?->toISOString(),
+                'created_at' => $displaySubscription->created_at->toISOString(),
+                'features' => $plan?->features ?? [],
+                'limits' => $plan?->limits ?? [],
             ];
         }
 
         return Inertia::render('billing/index', [
             'plans' => $plans,
             'subscription' => $subscriptionData,
-            'on_generic_trial' => $tenant->onGenericTrial(),
+            'on_generic_trial' => $tenant->trial_ends_at !== null && $tenant->trial_ends_at->isFuture(),
             'generic_trial_ends_at' => $tenant->trial_ends_at?->toISOString(),
+            'available_gateways' => $this->getAvailableGateways(),
         ]);
     }
 
-    public function checkout(Request $request): JsonResponse
+    public function subscribe(Request $request): JsonResponse
     {
-        $request->validate([
-            'price_id' => ['required', 'string', 'starts_with:price_'],
+        $validated = $request->validate([
+            'plan_id' => ['required', 'integer', 'exists:billing_plans,id'],
+            'gateway' => ['required', 'string'],
+            'billing_cycle' => ['nullable', 'string', 'in:daily,weekly,monthly,quarterly,yearly'],
         ]);
 
-        $planPrice = PlanPrice::where('stripe_id', $request->string('price_id'))
-            ->with('plan')
-            ->where('active', true)
-            ->where('type', 'base')
-            ->firstOrFail();
-
         /** @var Tenant $tenant */
         $tenant = tenant();
-        $plan = $planPrice->plan;
-        $subscription = $tenant->newSubscription('default', $planPrice->stripe_id);
-
-        $trialSettings = $this->resolveTrialSettings($tenant, $plan);
-        if ($trialSettings['days']) {
-            $subscription->trialUntil(now()->addDays($trialSettings['days'])->endOfDay());
-        }
-
-        $checkoutOptions = [
-            'success_url' => route('billing').'?checkout=success&session_id={CHECKOUT_SESSION_ID}',
-            'cancel_url' => route('billing').'?checkout=cancelled',
-        ];
-
-        $checkoutEmail = $request->user()?->email;
-        $checkoutCustomerOptions = [];
-
-        if ($checkoutEmail && $tenant->hasStripeId()) {
-            // Existing Stripe customers ignore customer_email in Checkout, so keep customer email in sync.
-            try {
-                $tenant->updateStripeCustomer(['email' => $checkoutEmail]);
-            } catch (\Throwable) {
-                // Non-critical: continue checkout even if customer update fails.
-            }
-        }
-
-        if ($checkoutEmail) {
-            // Cashier always sets the `customer` param for subscription checkout sessions.
-            // Provide email via customer creation/update options to avoid Stripe conflict.
-            $checkoutCustomerOptions['email'] = $checkoutEmail;
-        }
-
-        if ($trialSettings['days'] && $trialSettings['without_card']) {
-            $checkoutOptions['payment_method_collection'] = 'if_required';
-        }
-
-        $session = $subscription->checkout($checkoutOptions, $checkoutCustomerOptions);
-
-        return response()->json(['url' => $session->url]);
-    }
-
-    public function portal(): JsonResponse
-    {
-        /** @var Tenant $tenant */
-        $tenant = tenant();
-
-        $url = $tenant->billingPortalUrl(route('billing'));
-
-        return response()->json(['url' => $url]);
-    }
-
-    /**
-     * @return array{days:int|null, without_card:bool}
-     */
-    protected function resolveTrialSettings(Tenant $tenant, Plan $plan): array
-    {
-        $fallbackTrialDays = $plan->trial_enabled && $plan->trial_days ? $plan->trial_days : null;
-        $fallbackWithoutCard = $plan->trial_enabled ? $plan->trial_without_card : false;
 
         try {
-            $stripeProduct = $tenant->stripe()->products->retrieve($plan->stripe_id, []);
-            $metadata = $stripeProduct->metadata?->toArray() ?? [];
+            $result = $this->subscriptionService->createSubscription(
+                tenantId: $tenant->id,
+                planId: $validated['plan_id'],
+                gateway: $validated['gateway'],
+                billingCycle: isset($validated['billing_cycle'])
+                    ? BillingCycle::from($validated['billing_cycle'])
+                    : null,
+                options: [
+                    'success_url' => route('billing').'?checkout=success',
+                    'cancel_url' => route('billing').'?checkout=cancelled',
+                    'customer_name' => $tenant->name,
+                    'customer_email' => $request->user()?->email,
+                    'product_name' => $result['subscription']->plan?->name ?? 'Subscription',
+                    'metadata' => [
+                        'tenant_id' => $tenant->id,
+                    ],
+                ],
+            );
 
-            $trialEnabled = ($metadata['trial_enabled'] ?? '') === 'true';
-            $trialDays = isset($metadata['trial_days']) && is_numeric($metadata['trial_days'])
-                ? (int) $metadata['trial_days']
-                : null;
-            $trialWithoutCard = ($metadata['trial_without_card'] ?? '') === 'true';
-            $canonicalTrialDays = $trialEnabled && $trialDays ? $trialDays : null;
-            $canonicalWithoutCard = $trialEnabled && $canonicalTrialDays ? $trialWithoutCard : false;
-
-            if (
-                $plan->trial_enabled !== $trialEnabled
-                || $plan->trial_days !== $canonicalTrialDays
-                || $plan->trial_without_card !== $canonicalWithoutCard
-            ) {
-                $plan->update([
-                    'trial_enabled' => $trialEnabled,
-                    'trial_days' => $canonicalTrialDays,
-                    'trial_without_card' => $canonicalWithoutCard,
-                ]);
-            }
-
-            return [
-                'days' => $canonicalTrialDays,
-                'without_card' => $canonicalWithoutCard,
-            ];
-        } catch (\Throwable) {
-            return [
-                'days' => $fallbackTrialDays,
-                'without_card' => $fallbackWithoutCard && (bool) $fallbackTrialDays,
-            ];
+            return response()->json([
+                'checkout_url' => $result['checkoutUrl'],
+                'subscription_id' => $result['subscription']->id,
+            ]);
+        } catch (\Throwable $e) {
+            return response()->json([
+                'error' => $e->getMessage(),
+            ], 422);
         }
     }
 
+    public function cancel(Request $request): JsonResponse
+    {
+        /** @var Tenant $tenant */
+        $tenant = tenant();
+
+        $subscription = $this->subscriptionService->getTenantSubscription($tenant->id);
+
+        if (! $subscription) {
+            return response()->json(['error' => 'No active subscription found.'], 404);
+        }
+
+        $this->subscriptionService->cancelSubscription($subscription);
+
+        return response()->json(['message' => 'Subscription cancelled successfully.']);
+    }
+
+    public function invoices(Request $request): Response
+    {
+        /** @var Tenant $tenant */
+        $tenant = tenant();
+
+        $payments = $this->paymentService->getTenantPayments($tenant->id);
+
+        $invoices = $payments->map(function ($payment) {
+            return [
+                'id' => $payment->id,
+                'invoice_number' => $this->invoiceService->generateInvoiceNumber($payment),
+                'amount' => $payment->amount,
+                'currency' => $payment->currency,
+                'gateway' => $payment->gateway,
+                'status' => $payment->status->value,
+                'paid_at' => $payment->paid_at?->toISOString(),
+                'created_at' => $payment->created_at->toISOString(),
+            ];
+        });
+
+        return Inertia::render('billing/invoices', [
+            'invoices' => $invoices,
+        ]);
+    }
+
+    public function callback(Request $request, string $gateway): JsonResponse
+    {
+        $transactionId = $request->input('transaction_id') ?? $request->input('tran_id');
+
+        if (! $transactionId) {
+            return response()->json(['error' => 'Missing transaction ID.'], 400);
+        }
+
+        try {
+            $subscription = $this->subscriptionService->verifyAndActivate(
+                transactionId: $transactionId,
+                gateway: $gateway,
+                payload: $request->all(),
+            );
+
+            return response()->json([
+                'message' => 'Payment verified successfully.',
+                'subscription_id' => $subscription->id,
+            ]);
+        } catch (\Throwable $e) {
+            return response()->json([
+                'error' => $e->getMessage(),
+            ], 422);
+        }
+    }
+
+    private function getAvailableGateways(): array
+    {
+        $gateways = config('billing.gateways', []);
+        $available = [];
+
+        foreach ($gateways as $key => $config) {
+            $available[] = [
+                'id' => $key,
+                'label' => $config['label'] ?? ucfirst($key),
+            ];
+        }
+
+        return $available;
+    }
 }

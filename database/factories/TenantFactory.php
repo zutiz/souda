@@ -3,11 +3,13 @@
 namespace Database\Factories;
 
 use App\Models\Tenant;
+use App\Modules\Billing\Enums\BillingCycle;
+use App\Modules\Billing\Enums\SubscriptionStatus;
+use App\Modules\Billing\Models\Plan;
 use Illuminate\Database\Eloquent\Factories\Factory;
-use Illuminate\Support\Str;
 
 /**
- * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\Tenant>
+ * @extends Factory<Tenant>
  */
 class TenantFactory extends Factory
 {
@@ -28,12 +30,18 @@ class TenantFactory extends Factory
     public function subscribed(): static
     {
         return $this->afterCreating(function (Tenant $tenant) {
+            $plan = Plan::factory()->createQuietly();
+
             $tenant->subscriptions()->create([
-                'type' => 'default',
-                'stripe_id' => 'sub_test_'.Str::random(14),
-                'stripe_status' => 'active',
-                'stripe_price' => 'price_test_default',
-                'quantity' => 1,
+                'plan_id' => $plan->id,
+                'gateway' => 'manual',
+                'status' => SubscriptionStatus::Active,
+                'billing_cycle' => BillingCycle::Monthly,
+                'amount' => $plan->monthly_price,
+                'currency' => $plan->currency,
+                'starts_at' => now(),
+                'expires_at' => now()->addMonth(),
+                'next_billing_at' => now()->addMonth(),
             ]);
         });
     }
@@ -41,13 +49,18 @@ class TenantFactory extends Factory
     public function cancelledSubscription(): static
     {
         return $this->afterCreating(function (Tenant $tenant) {
+            $plan = Plan::factory()->createQuietly();
+
             $tenant->subscriptions()->create([
-                'type' => 'default',
-                'stripe_id' => 'sub_test_'.Str::random(14),
-                'stripe_status' => 'canceled',
-                'stripe_price' => 'price_test_default',
-                'quantity' => 1,
-                'ends_at' => now()->subDay(),
+                'plan_id' => $plan->id,
+                'gateway' => 'manual',
+                'status' => SubscriptionStatus::Cancelled,
+                'billing_cycle' => BillingCycle::Monthly,
+                'amount' => $plan->monthly_price,
+                'currency' => $plan->currency,
+                'starts_at' => now()->subDays(30),
+                'expires_at' => now()->subDay(),
+                'cancelled_at' => now()->subDay(),
             ]);
         });
     }

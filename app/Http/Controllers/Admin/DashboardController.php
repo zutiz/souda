@@ -289,14 +289,11 @@ class DashboardController extends Controller
             ->take(5)
             ->get()
             ->map(function (User $user) {
-                $subscription = $user->tenant?->subscription();
                 $planName = null;
 
-                if ($subscription?->stripe_price) {
-                    $planPrice = PlanPrice::with('plan')
-                        ->where('stripe_id', $subscription->stripe_price)
-                        ->first();
-                    $planName = $planPrice?->plan?->name;
+                $activeSub = $user->tenant?->activeSubscription();
+                if ($activeSub) {
+                    $planName = $activeSub->plan?->name;
                 }
 
                 return [
@@ -417,7 +414,7 @@ class DashboardController extends Controller
     {
         return match ($range) {
             '7d', '30d' => Carbon::parse($period)->endOfDay(),
-            default => Carbon::parse($period . '-01')->endOfMonth(),
+            default => Carbon::parse($period.'-01')->endOfMonth(),
         };
     }
 }

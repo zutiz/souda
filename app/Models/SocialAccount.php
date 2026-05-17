@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Database\Factories\SocialAccountFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -9,7 +10,7 @@ use Stancl\Tenancy\Database\Concerns\CentralConnection;
 
 class SocialAccount extends Model
 {
-    /** @use HasFactory<\Database\Factories\SocialAccountFactory> */
+    /** @use HasFactory<SocialAccountFactory> */
     use CentralConnection, HasFactory;
 
     /**

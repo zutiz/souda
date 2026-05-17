@@ -1,4 +1,4 @@
-import { Head } from '@inertiajs/react';
+import { Head, Link } from '@inertiajs/react';
 import axios from 'axios';
 import {
     AlertCircle,
@@ -11,8 +11,8 @@ import {
 import { useMemo, useState } from 'react';
 import {
     index,
-    checkout,
-    portal,
+    subscribe,
+    invoices,
 } from '@/actions/App/Http/Controllers/BillingController';
 import Heading from '@/components/heading';
 import { Badge } from '@/components/ui/badge';
@@ -41,7 +41,7 @@ type PlanPrice = {
 };
 
 type Plan = {
-    id: string;
+    id: number;
     name: string;
     description: string | null;
     metadata: Record<string, string>;
@@ -149,9 +149,11 @@ function formatStatus(status: string): string {
     return status.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
-async function redirectTo(url: string, data?: Record<string, string>) {
+async function redirectToCheckout(url: string, data: Record<string, unknown>) {
     const response = await axios.post(url, data);
-    window.location.href = response.data.url;
+    if (response.data.checkout_url) {
+        window.location.href = response.data.checkout_url;
+    }
 }
 
 function daysUntil(dateString: string): number {
@@ -167,10 +169,12 @@ function daysUntil(dateString: string): number {
 }
 
 function SubscribeButton({
+    planId,
     price,
     label,
     isPopular,
 }: {
+    planId: number;
     price: PlanPrice;
     label?: string;
     isPopular?: boolean;
@@ -180,7 +184,11 @@ function SubscribeButton({
     async function handleCheckout() {
         setLoading(true);
         try {
-            await redirectTo(checkout.url(), { price_id: price.id });
+            await redirectToCheckout(subscribe.url(), {
+                plan_id: planId,
+                gateway: 'stripe',
+                billing_cycle: price.interval,
+            });
         } catch {
             setLoading(false);
         }
@@ -283,6 +291,7 @@ function PlanCard({
             )}
             <CardFooter>
                 <SubscribeButton
+                    planId={plan.id}
                     price={price}
                     label={plan.metadata?.cta}
                     isPopular={isPopular}
@@ -385,13 +394,6 @@ function formatDate(dateString: string): string {
 }
 
 function SubscriptionCard({ subscription }: { subscription: Subscription }) {
-    const [loading, setLoading] = useState(false);
-
-    async function handlePortal() {
-        setLoading(true);
-        await redirectTo(portal.url());
-    }
-
     return (
         <Card>
             <CardHeader>
@@ -514,20 +516,6 @@ function SubscriptionCard({ subscription }: { subscription: Subscription }) {
                     </>
                 )}
             </CardContent>
-            <CardFooter>
-                <Button
-                    onClick={handlePortal}
-                    disabled={loading}
-                    className="gap-2"
-                >
-                    {loading ? (
-                        <Spinner />
-                    ) : (
-                        <ExternalLink className="size-4" />
-                    )}
-                    Manage Billing
-                </Button>
-            </CardFooter>
         </Card>
     );
 }
@@ -537,13 +525,6 @@ function PastSubscriptionBanner({
 }: {
     subscription: Subscription;
 }) {
-    const [loading, setLoading] = useState(false);
-
-    async function handlePortal() {
-        setLoading(true);
-        await redirectTo(portal.url());
-    }
-
     const statusMessage =
         subscription.stripe_status === 'canceled'
             ? 'Your subscription has been cancelled.'
@@ -571,19 +552,11 @@ function PastSubscriptionBanner({
                         )}
                     </div>
                 </div>
-                <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handlePortal}
-                    disabled={loading}
-                    className="shrink-0 gap-2"
-                >
-                    {loading ? (
-                        <Spinner />
-                    ) : (
+                <Button variant="outline" size="sm" asChild className="shrink-0 gap-2">
+                    <Link href={invoices().url}>
                         <ExternalLink className="size-4" />
-                    )}
-                    View Billing History
+                        View Billing History
+                    </Link>
                 </Button>
             </CardContent>
         </Card>

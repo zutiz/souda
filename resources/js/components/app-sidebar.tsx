@@ -9,7 +9,7 @@ import {
 } from 'lucide-react';
 import { edit as adminSettingsGeneral } from '@/actions/App/Http/Controllers/Admin/AppSettingsController';
 import AdminDashboard from '@/actions/App/Http/Controllers/Admin/DashboardController';
-import { index as pricingIndex } from '@/actions/App/Http/Controllers/Admin/StripePricingController';
+import { index as pricingIndex } from '@/actions/App/Http/Controllers/Admin/PlanController';
 import { index as usersIndex } from '@/actions/App/Http/Controllers/Admin/UserController';
 import { NavMain } from '@/components/nav-main';
 import { NavUser } from '@/components/nav-user';
