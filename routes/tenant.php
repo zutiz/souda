@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Http\Controllers\BillingController;
 use App\Http\Controllers\TaskController;
+use App\Http\Controllers\TeamController;
 use App\Http\Middleware\InitializeTenancyByUser;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -33,6 +34,12 @@ Route::middleware(['web', 'auth', InitializeTenancyByUser::class])->group(functi
 
         Route::resource('tasks', TaskController::class)
             ->only(['index', 'store', 'update', 'destroy']);
+
+        Route::get('/team', [TeamController::class, 'index'])->name('team.index');
+        Route::post('/team/invite', [TeamController::class, 'invite'])->name('team.invite')->middleware('seat');
+        Route::post('/team/accept/{token}', [TeamController::class, 'accept'])->name('team.accept');
+        Route::delete('/team/{allocation}', [TeamController::class, 'destroy'])->name('team.destroy');
+        Route::post('/team/{allocation}/resend', [TeamController::class, 'resend'])->name('team.resend');
     });
 });
 

@@ -41,7 +41,7 @@ All four bootstrappers are active:
 
 **Central models** (use `CentralConnection` trait):
 - `User`, `Tenant`, `AppSetting`, `SocialAccount`
-- All Billing models: `Plan`, `Subscription`, `Payment`
+- All Billing models: `Plan`, `Subscription`, `Payment`, `SeatAllocation`
 - All Spatie Permission models
 
 **Tenant models** (no trait, run on tenant DB):
@@ -59,6 +59,7 @@ All four bootstrappers are active:
 - Never query tenant models outside initialised tenant context.
 - Tenant context is derived from authenticated user state, not user-editable request input.
 - Subscription gating ensures unpaid/expired tenants cannot access protected features.
+- Seat gating (`EnsureSeatAvailable`) prevents exceeding plan seat limits on team invites.
 - Feature gating (`EnsureTenantHasFeature`) controls granular plan-based access.
 
 ## Domain Support

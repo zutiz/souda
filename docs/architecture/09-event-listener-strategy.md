@@ -12,7 +12,7 @@ Represent significant business occurrences within a module.
 
 | Module | Events | Purpose |
 |--------|--------|---------|
-| **Billing** | `SubscriptionActivated`, `SubscriptionCancelled`, `SubscriptionExpired`, `PaymentReceived`, `PaymentFailed` | Subscription lifecycle |
+| **Billing** | `SubscriptionActivated`, `SubscriptionCancelled`, `SubscriptionExpired`, `PaymentReceived`, `PaymentFailed`, `SeatAllocated`, `SeatReleased`, `SeatOverageInvoiced` | Subscription lifecycle + seat management |
 | **Products** | `ProductCreated`, `ProductUpdated`, `ProductDeleted`, `ProductArchived` | Product catalog changes |
 | **Orders** | `OrderCreated`, `OrderPaid`, `OrderShipped`, `OrderDelivered`, `OrderCancelled`, `OrderRefunded` | Order lifecycle |
 | **Inventory** | `StockUpdated`, `StockDepleted`, `StockAdjusted`, `LowStockAlert` | Inventory changes |
@@ -187,6 +187,10 @@ public function boot(): void
     Event::listen(SubscriptionCancelled::class, SendSubscriptionNotification::class);
     Event::listen(PaymentReceived::class, SendSubscriptionNotification::class);
     Event::listen(PaymentFailed::class, SendSubscriptionNotification::class);
+
+    // Seat events
+    Event::listen(SeatAllocated::class, RecalculateSeatUsage::class);
+    Event::listen(SeatReleased::class, RecalculateSeatUsage::class);
 }
 ```
 
@@ -332,6 +336,31 @@ SubscriptionActivated event dispatched
     │
     └──► RecordRevenue listener (high queue)
             └── Updates revenue tracking
+```
+
+### Seat Allocation Flow
+
+```
+Admin invites team member
+    │
+    ▼
+TeamController::invite() with EnsureSeatAvailable middleware
+    │
+    ▼
+SeatService::allocateSeat()
+    │
+    ├── Creates SeatAllocation with status Pending
+    │
+    ▼
+SeatAllocated event dispatched
+    │
+    └──► RecalculateSeatUsage listener (sync)
+            └── Logs seat count, triggers overage invoice if over limit
+
+User accepts invitation
+    │
+    ▼
+SeatService::activatePendingSeat() → status becomes Active
 ```
 
 ## Event Discovery & Debugging

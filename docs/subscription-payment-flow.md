@@ -23,9 +23,10 @@ All billing tables reside in the **central database** (not per-tenant databases)
 
 | Table | Purpose |
 |-------|---------|
-| `billing_plans` | Plan definitions with pricing, features, limits |
+| `billing_plans` | Plan definitions with pricing, features, limits, seat configuration |
 | `billing_subscriptions` | Tenant subscriptions with status, billing cycle, gateway |
 | `billing_payments` | Individual payment records with transaction details |
+| `billing_seat_allocations` | Seat assignments per tenant with type (owner/staff), status (active/pending/released) |
 
 #### Laravel Cashier (Central Database)
 
@@ -78,6 +79,8 @@ billing_plans
 ├── features (JSON), limits (JSON)
 ├── is_active, display_order, popular, cta
 ├── trial_enabled, trial_days, trial_without_card
+├── pricing_model (flat|per_seat|tiered|usage_based)
+├── default_seats, seat_price, max_seats, seat_type
 └── hasMany(Subscription)
 ```
 
@@ -104,6 +107,18 @@ billing_payments
 ├── transaction_id, amount, currency
 ├── status (enum), payload (JSON)
 └── paid_at
+```
+
+#### SeatAllocation (`App\Modules\Billing\Models\SeatAllocation`)
+
+```
+billing_seat_allocations
+├── tenant_id, subscription_id
+├── user_id, seat_type (owner|admin|staff)
+├── status (active|pending|released)
+├── email, invitation_token
+├── allocated_at, released_at, billing_start_at
+└── metadata (JSON)
 ```
 
 ---
@@ -404,6 +419,158 @@ For in-code checks (not route gating), `SubscriptionService` provides:
 
 ---
 
+## Seat-Based Pricing
+
+### Overview
+
+Plans support multiple pricing models via the `pricing_model` column. Seat-based pricing (`per_seat`) bills tenants for users beyond their plan's included seat count.
+
+### Pricing Strategy Pattern
+
+A strategy interface (`PricingStrategy`) allows extensible pricing calculations:
+
+| Strategy | Behavior |
+|----------|----------|
+| `SeatPricingStrategy` | Counts billable seats, calculates overage against `default_seats` × `seat_price` |
+| `FlatPricingStrategy` | No seat tracking, zero overage (fallback for flat-rate plans) |
+| (Future) `UsageBasedStrategy` | Placeholder for usage-based billing |
+
+### Seat Consumption Rules
+
+| User Type | Consumes Seat? | Seat Type |
+|-----------|---------------|-----------|
+| Tenant owner (identified by `tenant.owner_id`) | Yes | `owner` |
+| Tenant staff | Yes | `staff` |
+| Pending invitations | Yes (reserves seat) | `pending` status |
+| Platform admins (Spatie `admin` role) | No | — |
+| API users | No | — |
+
+### Database: `billing_seat_allocations`
+
+Each row tracks one seat assignment. Seats transition through statuses:
+
+```
+Pending (invited) ──→ Active (accepted) ──→ Released (removed)
+```
+
+### Key Operations
+
+**Allocate a seat:**
+```php
+$service->allocateSeat(
+    tenantId: $tenant->id,
+    seatType: SeatType::Staff,
+    userId: $user->id,           // null for pending invitations
+    invitationToken: 'token-123', // for pending invitations
+);
+```
+
+**Release a seat:**
+```php
+$service->releaseSeatByUser($tenant->id, $user->id);
+```
+
+**Check overage:**
+```php
+$overage = $service->getOverageCount($tenant->id); // billable - included
+```
+
+### Overage Invoicing
+
+`OverageInvoiceService::generateOverageInvoice($tenantId)` creates an overage invoice for a tenant and dispatches `SeatOverageInvoiced`. The command iterates all tenants with accessible subscriptions.
+
+### Middleware: `EnsureSeatAvailable`
+
+Aliased as `seat`. Checks if the current plan allows adding another seat before processing an invitation:
+
+```php
+Route::middleware(['seat'])->group(function () {
+    Route::post('/team/invite', [TeamController::class, 'invite']);
+});
+```
+
+Throws `SeatLimitExceededException` when `max_seats` is reached.
+
+### Events
+
+| Event | Dispatched When | Listener |
+|-------|----------------|----------|
+| `SeatAllocated` | Seat assigned (active or pending) | `RecalculateSeatUsage::handleSeatAllocated` |
+| `SeatReleased` | Seat released | `RecalculateSeatUsage::handleSeatReleased` |
+| `SeatOverageInvoiced` | Overage invoice generated | — (extensible) |
+
+### Sync Job
+
+`SyncSeatAllocations` is a queued job that syncs user records → seat allocations for a tenant. Used for reconciliation when users are created outside the seat allocation flow.
+
+---
+
+## Team Management
+
+### Overview
+
+Team management routes allow tenant owners/admins to invite, accept, list, and remove team members. The `EnsureSeatAvailable` middleware gates the invite route to enforce plan seat limits.
+
+### Routes
+
+All team routes are within the tenant context (`web`, `auth`, `InitializeTenancyByUser`) and require an active subscription:
+
+```php
+Route::middleware('subscription')->group(function () {
+    Route::get('/team', [TeamController::class, 'index'])->name('team.index');
+    Route::post('/team/invite', [TeamController::class, 'invite'])->name('team.invite')->middleware('seat');
+    Route::post('/team/accept/{token}', [TeamController::class, 'accept'])->name('team.accept');
+    Route::delete('/team/{allocation}', [TeamController::class, 'destroy'])->name('team.destroy');
+    Route::post('/team/{allocation}/resend', [TeamController::class, 'resend'])->name('team.resend');
+});
+```
+
+### Controller: `TeamController`
+
+| Method | Route | Purpose |
+|--------|-------|---------|
+| `index()` | `GET /team` | Lists all seat allocations (active, pending, released) with user info |
+| `invite()` | `POST /team/invite` | Creates a pending seat allocation with random `invitation_token` |
+| `accept()` | `POST /team/accept/{token}` | Activates a pending allocation by token, assigns current user |
+| `destroy()` | `DELETE /team/{allocation}` | Releases a seat (removes team member or cancels invitation) |
+| `resend()` | `POST /team/{allocation}/resend` | Regenerates invitation token for pending allocations |
+
+### Invitation Flow
+
+```
+1. Admin POSTs /team/invite with email + seat_type
+2. EnsureSeatAvailable middleware checks max_seats
+3. SeatService::allocateSeat creates Pending allocation with invitation_token
+4. User clicks accept link with token
+5. POST /team/accept/{token} activates the allocation (status → Active, user_id set)
+```
+
+### Seat Gating
+
+The invite route applies `EnsureSeatAvailable` middleware which:
+1. Checks `$strategy->canAddSeat()` against the plan's `max_seats` limit
+2. Throws `SeatLimitExceededException` (HTTP 422) if the limit is reached
+3. Returns silently if limit is not exceeded
+
+### Validation
+
+`InviteTeamMemberRequest` validates:
+- `email`: required, valid email, max 255 chars
+- `seat_type`: required, must be `admin` or `staff` (owner cannot be invited directly)
+
+### Security
+
+- Only tenants with an active subscription can access team routes
+- `destroy()` and `resend()` verify `$allocation->tenant_id !== $tenant->id` to prevent cross-tenant access
+- Only pending invitations can be resent (422 otherwise)
+- `accept()` requires auth; invalid/expired tokens return 404
+
+---
+
+
+
+
+
 ## Middleware Architecture
 
 The billing/tenancy middleware stack has **four layers** with distinct responsibilities:
@@ -414,6 +581,7 @@ The billing/tenancy middleware stack has **four layers** with distinct responsib
 | 2 | `EnsureSubscribed` | — | Admin + subscription gate (legacy) | Yes |
 | 3 | `EnsureTenantHasSubscription` | `subscription` | Subscription existence + accessibility check | No (redirects to billing) |
 | 4 | `EnsureTenantHasFeature` | `feature:{name}` | Plan feature gate | No |
+| 5 | `EnsureSeatAvailable` | `seat` | Checks plan max_seats limit before adding users | No |
 
 ### Route Registration in `bootstrap/app.php`
 
@@ -439,6 +607,13 @@ Route::middleware(['web', 'auth', InitializeTenancyByUser::class])->group(functi
     Route::middleware('subscription')->group(function () {
         Route::get('/dashboard', ...);
         Route::resource('tasks', TaskController::class);
+
+        // Team management
+        Route::get('/team', [TeamController::class, 'index'])->name('team.index');
+        Route::post('/team/invite', [TeamController::class, 'invite'])->middleware('seat');
+        Route::post('/team/accept/{token}', [TeamController::class, 'accept']);
+        Route::delete('/team/{allocation}', [TeamController::class, 'destroy']);
+        Route::post('/team/{allocation}/resend', [TeamController::class, 'resend']);
     });
 
     // Feature-gated routes (anywhere in tenant routes)
@@ -535,6 +710,7 @@ To switch to domain-based identification:
 |------|---------|
 | `resources/js/pages/billing/index.tsx` | Main billing/subscription page |
 | `resources/js/pages/billing/invoices.tsx` | Invoice history |
+| `resources/js/pages/team/index.tsx` | Team member list + invitation management |
 
 ### Key Features
 
@@ -553,6 +729,7 @@ To switch to domain-based identification:
 - `app/Modules/Billing/Models/Subscription.php`
 - `app/Modules/Billing/Models/Payment.php`
 - `app/Modules/Billing/Models/Plan.php`
+- `app/Modules/Billing/Models/SeatAllocation.php`
 - `app/Models/Tenant.php`
 - `app/Models/Plan.php` (Cashier mirror)
 - `app/Models/PlanPrice.php` (Cashier mirror)
@@ -564,10 +741,13 @@ To switch to domain-based identification:
 - `app/Modules/Billing/Services/BillingManager.php`
 - `app/Modules/Billing/Services/PlanService.php`
 - `app/Modules/Billing/Services/InvoiceService.php`
+- `app/Modules/Billing/Services/SeatService.php`
+- `app/Modules/Billing/Services/OverageInvoiceService.php`
 
 ### Controllers
 
 - `app/Http/Controllers/BillingController.php`
+- `app/Http/Controllers/TeamController.php`
 
 ### Gateway Drivers
 
@@ -591,6 +771,7 @@ To switch to domain-based identification:
 - `app/Http/Middleware/EnsureTenantHasSubscription.php` - Strict subscription gate (aliased as `subscription`)
 - `app/Http/Middleware/EnsureTenantHasFeature.php` - Plan feature gate (aliased as `feature`)
 - `app/Http/Middleware/InitializeTenancyByUser.php` - User-based tenant resolver
+- `app/Modules/Billing/Http/Middleware/EnsureSeatAvailable.php` - Seat limit check (aliased as `seat`)
 
 ### Config
 
@@ -612,6 +793,7 @@ To switch to domain-based identification:
 ### Jobs
 
 - `app/Jobs/TenantJob.php` - Abstract base for tenant-scoped queued jobs
+- `app/Modules/Billing/Jobs/SyncSeatAllocations.php` - Syncs user records to seat allocations
 
 ### Events
 
@@ -620,15 +802,35 @@ To switch to domain-based identification:
 - `app/Modules/Billing/Events/SubscriptionExpired.php`
 - `app/Modules/Billing/Events/PaymentReceived.php`
 - `app/Modules/Billing/Events/PaymentFailed.php`
+- `app/Modules/Billing/Events/SeatAllocated.php`
+- `app/Modules/Billing/Events/SeatReleased.php`
+- `app/Modules/Billing/Events/SeatOverageInvoiced.php`
 
 ### Listeners
 
 - `app/Modules/Billing/Listeners/SendSubscriptionNotification.php`
+- `app/Modules/Billing/Listeners/RecalculateSeatUsage.php`
+
+### Form Requests
+
+- `app/Http/Requests/InviteTeamMemberRequest.php` - Validates `email` + `seat_type` for team invitations
 
 ### Service Provider
 
 - `app/Providers/BillingServiceProvider.php` - Middleware aliases, event listeners, service singletons
 - `app/Providers/TenancyServiceProvider.php` - Tenant lifecycle hooks (CreateDatabase, MigrateDatabase, SetupTenantDefaults)
+
+### Contracts & Strategies
+
+- `app/Modules/Billing/Contracts/PricingStrategy.php` - Strategy interface
+- `app/Modules/Billing/Strategies/SeatPricingStrategy.php` - Seat-based pricing logic
+- `app/Modules/Billing/Strategies/FlatPricingStrategy.php` - Flat-rate fallback
+
+### Enums
+
+- `app/Modules/Billing/Enums/PricingModel.php` - flat, per_seat, tiered, usage_based
+- `app/Modules/Billing/Enums/SeatType.php` - owner, admin, staff
+- `app/Modules/Billing/Enums/SeatStatus.php` - active, pending, released
 
 ---
 
@@ -655,3 +857,11 @@ To switch to domain-based identification:
 10. **Feature gating is plan-based** - Features are JSON arrays on `billing_plans`. `EnsureTenantHasFeature` middleware gates routes by feature name (e.g., `feature:reports`). `PlanFeatureService` provides programmatic feature checks with limit enforcement.
 
 11. **`EnsureSubscribed` is dead code** - The class exists at `app/Http/Middleware/EnsureSubscribed.php` but is not aliased or referenced in any route definition. The active subscription middleware is `EnsureTenantHasSubscription` (aliased as `subscription`). Keep `EnsureSubscribed` as reference or remove when confident no other code depends on it.
+
+12. **Seat-based pricing uses strategy pattern** - Plans can be `flat`, `per_seat`, `tiered`, or `usage_based`. The `PricingStrategy` interface allows adding new pricing models without touching core billing logic. Seat allocations live in `billing_seat_allocations` (central DB). Overage is calculated at billing time by `OverageInvoiceService` and can trigger `SeatOverageInvoiced` events.
+
+13. **Seat consumption rules** - Tenant owners and staff consume seats. Platform admins (Spatie `admin` role) do not. Pending invitations reserve a seat via `SeatStatus::Pending`. Released seats are excluded from counts. Seat allocation sync can be run via `SyncSeatAllocations` job for reconciliation.
+
+14. **Middleware stack extended** - `EnsureSeatAvailable` (aliased `seat`) sits alongside `subscription` and `feature` middleware to gate routes that add team members when the plan's `max_seats` limit would be exceeded.
+
+15. **Team invitation routes are subscription-gated** - All team routes are inside the `subscription` middleware group. The `invite` route also applies the `seat` middleware. Guests are redirected to login, non-subscribed users redirected to billing, and seat-overflow returns 422 with `SeatLimitExceededException`.

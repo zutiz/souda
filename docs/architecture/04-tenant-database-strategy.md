@@ -80,7 +80,7 @@ Multi-database tenancy with strict isolation between central (shared) and tenant
 | **Authentication** | `users`, `sessions`, `password_reset_tokens` | Users authenticate to platform, not tenant |
 | **Authorization** | `roles`, `permissions`, `model_has_*` | Role definitions are platform-level |
 | **Tenancy** | `tenants`, `domains` | Tenant registry |
-| **Billing** | `billing_plans`, `billing_subscriptions`, `billing_payments`, `plans`, `plan_prices`, `subscriptions`, `subscription_items` | Plans are platform-defined, subscriptions track tenant billing |
+| **Billing** | `billing_plans`, `billing_subscriptions`, `billing_payments`, `billing_seat_allocations`, `plans`, `plan_prices`, `subscriptions`, `subscription_items` | Plans are platform-defined, subscriptions track tenant billing |
 | **Platform Config** | `app_settings`, `social_accounts` | Platform-wide settings |
 | **Infrastructure** | `jobs`, `job_batches`, `failed_jobs`, `cache`, `cache_locks` | Shared queue and cache |
 

@@ -27,6 +27,7 @@ This application uses `stancl/tenancy` v3 in **multi-database mode** with user-b
 │  │  Billing & Subscriptions (Central)                   │    │
 │  │  billing_plans, billing_subscriptions               │    │
 │  │  billing_payments                                   │    │
+│  │  billing_seat_allocations                           │    │
 │  │  plans, plan_prices (Cashier mirrors)               │    │
 │  │  subscriptions, subscription_items (Cashier)        │    │
 │  └──────────────────────────────────────────────────────┘    │
@@ -89,7 +90,7 @@ This application uses `stancl/tenancy` v3 in **multi-database mode** with user-b
 | Authentication | Central | `users`, `sessions` | Users authenticate to the platform |
 | Authorization | Central | `roles`, `permissions`, `model_has_roles` | Role definitions are platform-level |
 | Tenancy | Central | `tenants`, `domains` | Tenant registry |
-| Billing | Central | `billing_plans`, `billing_subscriptions`, `billing_payments` | Plans are platform-defined, subscriptions track tenant billing |
+| Billing | Central | `billing_plans`, `billing_subscriptions`, `billing_payments`, `billing_seat_allocations` | Plans are platform-defined, subscriptions track tenant billing |
 | Platform Config | Central | `app_settings`, `social_accounts` | Platform-wide settings |
 | Infrastructure | Central | `jobs`, `job_batches`, `failed_jobs` | Queue storage (central) |
 | Tenant Data | Tenant DB | `tasks` (and future: products, orders, inventory, CRM) | Business data isolated per tenant |
@@ -219,6 +220,11 @@ class Subscription extends Model
 {
     use CentralConnection;
 }
+
+class SeatAllocation extends Model
+{
+    use CentralConnection;
+}
 ```
 
 **Tenant models** (isolated data):
@@ -315,6 +321,16 @@ $middleware->prependToPriorityList(
 Route::middleware(['web', 'auth', InitializeTenancyByUser::class])->group(function () {
     Route::get('/dashboard', ...);
     Route::resource('tasks', TaskController::class);
+
+    // Subscription-gated routes
+    Route::middleware('subscription')->group(function () {
+        Route::get('/dashboard', ...);
+        Route::resource('tasks', TaskController::class);
+
+        // Team management (invite gated by seat middleware)
+        Route::get('/team', [TeamController::class, 'index']);
+        Route::post('/team/invite', [TeamController::class, 'invite'])->middleware('seat');
+    });
 });
 ```
 
@@ -696,6 +712,7 @@ Tenant context is derived from the authenticated user's `tenant_id`, which is se
 7. EnsureAdmin (on admin routes)
 8. EnsureSubscribed / subscription (on tenant routes)
 9. EnsureTenantHasFeature / feature:{feature_name} (on specific routes)
+10. EnsureSeatAvailable / seat (on team invite routes)
 ```
 
 ### Full Middleware Stack for a Typical Tenant Request
@@ -741,6 +758,7 @@ feature gate (optional):
 | `EnsureSubscribed` | `subscription` | Checks `tenantHasAccessibleSubscription()` | Protected tenant routes |
 | `EnsureTenantHasSubscription` | — | Checks subscription access (Alias: `subscription`) | Protected tenant routes |
 | `EnsureTenantHasFeature` | `feature` | Checks plan feature access (`feature:name`) | Feature-specific routes |
+| `EnsureSeatAvailable` | `seat` | Checks plan `max_seats` limit before adding users | Team invite routes |
 | `HandleInertiaRequests` | — | Shares tenant data to Inertia | All web routes |
 | `HandleAppearance` | — | Handles dark/light mode | All web routes |
 
@@ -869,6 +887,9 @@ PlanFeatureService::tenantHasFeature($tenantId, 'inventory_management');
 | `SubscriptionExpired` | Subscription expires | `SendSubscriptionNotification::handleSubscriptionExpired` |
 | `PaymentReceived` | Payment completed | `SendSubscriptionNotification::handlePaymentReceived` |
 | `PaymentFailed` | Payment failed | `SendSubscriptionNotification::handlePaymentFailed` |
+| `SeatAllocated` | Seat assigned (active or pending) | `RecalculateSeatUsage::handleSeatAllocated` |
+| `SeatReleased` | Seat released | `RecalculateSeatUsage::handleSeatReleased` |
+| `SeatOverageInvoiced` | Overage invoice generated | — (extensible) |
 
 ### Grace Period
 
@@ -957,6 +978,8 @@ User registers custom domain
 | `app/Http/Middleware/InitializeTenancyByUser.php` | User-based tenant initialization |
 | `app/Http/Middleware/EnsureSubscribed.php` | Subscription access gate |
 | `app/Http/Middleware/EnsureTenantHasFeature.php` | Feature access gate |
+| `app/Modules/Billing/Http/Middleware/EnsureSeatAvailable.php` | Seat limit gate (alias: `seat`) |
+| `app/Modules/Billing/Models/SeatAllocation.php` | Seat allocation model (central) |
 | `bootstrap/app.php` | Middleware registration order |
 | `routes/tenant.php` | Tenant-scoped routes |
 | `routes/admin.php` | Admin routes (no tenant context) |

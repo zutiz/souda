@@ -35,6 +35,9 @@ class Plan extends Model
             'trial_days' => 'integer',
             'trial_without_card' => 'boolean',
             'display_order' => 'integer',
+            'default_seats' => 'integer',
+            'seat_price' => 'integer',
+            'max_seats' => 'integer',
         ];
     }
 

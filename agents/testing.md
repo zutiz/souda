@@ -14,21 +14,34 @@ composer test
 # Run a specific test file or filter
 php artisan test --compact tests/Feature/TaskTest.php
 php artisan test --compact --filter=TaskTest
+
+# Run billing tests only
+php artisan test --compact --filter='Tests\\Feature\\Billing'
 ```
 
-## Tenancy Testing Model (Lite)
+## Tenancy Testing Model
 
-- The lite edition supports single-database multi-tenancy only.
-- Tests should validate tenant isolation using tenant-scoped models and middleware behavior.
+- Multi-database mode: each `Tenant::factory()->create()` creates a real MySQL database.
+- `RefreshMultiDatabase` trait drops all `souda_tenant_%` DBs between tests and runs `migrate:fresh --database=central` once per class.
+- Always clean up tenants in `afterEach`: `$tenant->delete(); $tenant->forceDelete();`
 
-## Directory Structure
+## Test Structure
 
 ```text
 tests/
 ├── Pest.php
 ├── TestCase.php
+├── Suggestions/
 ├── Unit/
+├── Support/
+│   └── RefreshMultiDatabase.php
 └── Feature/
+    ├── Auth/
+    ├── Billing/        # Seat pricing, team invitations, payment tests
+    ├── Tenant/         # Lifecycle, expiry, feature gating, middleware tests
+    ├── Admin/
+    ├── Settings/
+    └── ...
 ```
 
 ## Isolation Test Pattern

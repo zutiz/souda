@@ -59,6 +59,7 @@ app/
 │   ├── Requests/                     # Form request classes
 │   │   ├── Admin/
 │   │   ├── Settings/
+│   │   ├── InviteTeamMemberRequest.php
 │   │   └── (top-level requests)
 │   ├── Resources/                    # API resource classes
 │   └── Responses/                    # Response overrides
@@ -182,6 +183,7 @@ resources/js/
 │   ├── settings/
 │   ├── admin/
 │   ├── billing/
+│   ├── team/
 │   └── (module pages)
 ├── lib/                              # Utility functions
 │   └── utils.ts

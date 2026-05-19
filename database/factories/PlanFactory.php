@@ -29,7 +29,32 @@ class PlanFactory extends Factory
             'trial_enabled' => true,
             'trial_days' => 14,
             'trial_without_card' => true,
+            'pricing_model' => 'per_seat',
+            'default_seats' => 3,
+            'seat_price' => 500,
+            'max_seats' => 50,
+            'seat_type' => 'per_user',
         ];
+    }
+
+    public function seatBased(): static
+    {
+        return $this->state(fn () => [
+            'pricing_model' => 'per_seat',
+            'default_seats' => 3,
+            'seat_price' => 500,
+            'max_seats' => 50,
+        ]);
+    }
+
+    public function flatPricing(): static
+    {
+        return $this->state(fn () => [
+            'pricing_model' => 'flat',
+            'default_seats' => 0,
+            'seat_price' => 0,
+            'max_seats' => null,
+        ]);
     }
 
     public function active(): static

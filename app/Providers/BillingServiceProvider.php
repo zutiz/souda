@@ -9,12 +9,15 @@ use App\Modules\Billing\Events\PaymentReceived;
 use App\Modules\Billing\Events\SubscriptionActivated;
 use App\Modules\Billing\Events\SubscriptionCancelled;
 use App\Modules\Billing\Events\SubscriptionExpired;
+use App\Modules\Billing\Http\Middleware\EnsureSeatAvailable;
 use App\Modules\Billing\Listeners\SendSubscriptionNotification;
 use App\Modules\Billing\Services\BillingManager;
 use App\Modules\Billing\Services\InvoiceService;
+use App\Modules\Billing\Services\OverageInvoiceService;
 use App\Modules\Billing\Services\PaymentService;
 use App\Modules\Billing\Services\PlanFeatureService;
 use App\Modules\Billing\Services\PlanService;
+use App\Modules\Billing\Services\SeatService;
 use App\Modules\Billing\Services\SubscriptionService;
 use Illuminate\Support\ServiceProvider;
 
@@ -43,6 +46,8 @@ class BillingServiceProvider extends ServiceProvider
         $this->app->singleton(PaymentService::class);
         $this->app->singleton(InvoiceService::class);
         $this->app->singleton(PlanFeatureService::class);
+        $this->app->singleton(SeatService::class);
+        $this->app->singleton(OverageInvoiceService::class);
     }
 
     /**
@@ -57,6 +62,9 @@ class BillingServiceProvider extends ServiceProvider
 
         $this->app->make('router')
             ->aliasMiddleware('feature', EnsureTenantHasFeature::class);
+
+        $this->app->make('router')
+            ->aliasMiddleware('seat', EnsureSeatAvailable::class);
 
         $this->registerEventListeners();
     }

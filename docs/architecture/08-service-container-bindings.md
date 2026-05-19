@@ -109,6 +109,12 @@ public function register(): void
     $this->app->singleton(PaymentService::class);
     $this->app->singleton(PlanService::class);
     $this->app->singleton(InvoiceService::class);
+    $this->app->singleton(SeatService::class);
+    $this->app->singleton(OverageInvoiceService::class);
+
+    // Strategy pattern — auto-resolved via container
+    $this->app->bind(SeatPricingStrategy::class);
+    $this->app->bind(FlatPricingStrategy::class);
 
     // Gateway drivers (resolved via BillingManager factory)
     $this->app->bind(StripeDriver::class);
@@ -122,6 +128,7 @@ public function register(): void
     $router = $this->app['router'];
     $router->aliasMiddleware('subscription', EnsureSubscribed::class);
     $router->aliasMiddleware('feature', EnsureTenantHasFeature::class);
+    $router->aliasMiddleware('seat', EnsureSeatAvailable::class);
 }
 
 public function boot(): void
@@ -153,6 +160,19 @@ public function boot(): void
     $events->listen(
         PaymentFailed::class,
         [$listener, 'handlePaymentFailed']
+    );
+
+    // Seat event listeners
+    $seatListener = $this->app->make(RecalculateSeatUsage::class);
+
+    $events->listen(
+        SeatAllocated::class,
+        [$seatListener, 'handleSeatAllocated']
+    );
+
+    $events->listen(
+        SeatReleased::class,
+        [$seatListener, 'handleSeatReleased']
     );
 }
 ```
@@ -384,11 +404,31 @@ interface PaymentGateway
 // Implementations
 class StripeDriver implements PaymentGateway { }
 class SSLCommerzDriver implements PaymentGateway { }
-class BKashDriver implements PaymentGateway { }
 
 // Resolution via factory
 $gateway = $billingManager->driver('stripe');
 $result = $gateway->charge(1000, 'BDT', [...]);
+```
+
+### Strategy Pattern (Pricing)
+
+```php
+// Contract
+interface PricingStrategy
+{
+    public function calculateAmount(Plan $plan, Subscription $subscription): int;
+    public function calculateOverage(string $tenantId, Plan $plan, Subscription $subscription): array;
+    public function canAddSeat(string $tenantId, Plan $plan): bool;
+    public function getMaxSeats(Plan $plan): ?int;
+}
+
+// Implementations
+class SeatPricingStrategy implements PricingStrategy { }
+class FlatPricingStrategy implements PricingStrategy { }
+
+// Resolution via SeatService factory method
+$strategy = $seatService->strategy($plan);
+$overage = $strategy->calculateOverage($tenantId, $plan, $subscription);
 ```
 
 ## Testing with Container Bindings

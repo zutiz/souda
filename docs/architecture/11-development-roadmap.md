@@ -242,6 +242,20 @@ Phased development plan for building the multi-tenant SaaS ERP platform. Each ph
 
 **Goal:** Complete billing module with all gateway drivers and advanced features.
 
+> **Note:** Seat-based pricing (strategy pattern, seat allocation, overage invoicing, team invitation routes, middleware gating) has been implemented ahead of schedule.
+
+### Completed
+
+- [x] Seat pricing strategy pattern (`PricingStrategy` interface + `SeatPricingStrategy`/`FlatPricingStrategy`)
+- [x] Seat allocation lifecycle (allocate, activate pending, release, resend invite)
+- [x] Overage invoicing service (`OverageInvoiceService`)
+- [x] `EnsureSeatAvailable` middleware (aliased `seat`)
+- [x] Team invitation routes + controller + frontend page
+- [x] Seat events + listeners (`SeatAllocated`, `SeatReleased`, `SeatOverageInvoiced`, `RecalculateSeatUsage`)
+- [x] `SyncSeatAllocations` queued job for user→seat reconciliation
+
+### Remaining
+
 ### Week 21-22: Gateway Completion
 
 - [ ] Complete `StripeDriver` implementation
