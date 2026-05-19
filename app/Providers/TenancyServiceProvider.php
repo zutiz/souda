@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Providers;
 
+use App\Listeners\SetupTenantDefaults;
 use Illuminate\Contracts\Http\Kernel;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Route;
@@ -31,6 +32,7 @@ class TenancyServiceProvider extends ServiceProvider
                 ])->send(function (Events\TenantCreated $event) {
                     return $event->tenant;
                 })->shouldBeQueued(false),
+                SetupTenantDefaults::class,
             ],
 
             Events\SavingTenant::class => [],

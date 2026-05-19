@@ -1,62 +1,72 @@
 # Multi-Tenancy Guide
 
-This application uses `stancl/tenancy` in single-database mode only.
+This application uses `stancl/tenancy` in **multi-database mode** for full data isolation.
 
 ## Tenancy Model
 
-- All tenants share one database.
-- Tenant data is isolated using `tenant_id` and tenancy scoping.
-- Plain authenticated routes are used (`/dashboard`, `/tasks`).
-- Per-tenant database creation and migration are not supported in the lite edition.
+- Each tenant gets their own MySQL database (`souda_tenant_{uuid}`).
+- Central database holds shared data (users, billing, plans, settings).
+- Tenant databases hold operational business data (tasks, future modules).
+- Tenant context is derived from the authenticated user's `tenant_id`.
+- Admin routes (`/admin/*`) bypass tenant context entirely.
 
 ## Registration Flow
 
 When a user registers:
 
-1. A `Tenant` record is created.
+1. A `Tenant` record is created in the central database.
 2. A `User` is created and linked via `tenant_id`.
+3. On first request, the tenant database is auto-created and migrated.
 
 This flow runs in a database transaction.
 
 ## Tenant Initialization
 
-After authentication, tenancy is initialized from the authenticated user's tenant context.
-The following bootstrappers are active:
+After authentication, tenancy is initialized via `InitializeTenancyByUser` middleware:
 
-- `CacheTenancyBootstrapper`
-- `FilesystemTenancyBootstrapper`
-- `QueueTenancyBootstrapper`
+1. Derives tenant from `auth()->user()->tenant_id`.
+2. Initializes tenancy and auto-creates the tenant DB if missing.
+3. Activates bootstrappers: Database, Cache, Filesystem, Queue.
+4. On request completion: `tenancy()->end()` reverts to central context.
 
-`DatabaseTenancyBootstrapper` is intentionally not used in lite mode.
+## Tenant Bootstrappers
 
-## Tenant-Scoped Models
+All four bootstrappers are active:
+- `DatabaseTenancyBootstrapper` — Switches DB connection to tenant database
+- `CacheTenancyBootstrapper` — Tags cache keys with tenant ID
+- `FilesystemTenancyBootstrapper` — Suffixes storage paths with tenant ID
+- `QueueTenancyBootstrapper` — Makes queued jobs tenant-aware
 
-Use `BelongsToTenant` on tenant-scoped models:
+## Central vs Tenant Models
 
-```php
-use Stancl\Tenancy\Database\Concerns\BelongsToTenant;
+**Central models** (use `CentralConnection` trait):
+- `User`, `Tenant`, `AppSetting`, `SocialAccount`
+- All Billing models: `Plan`, `Subscription`, `Payment`
+- All Spatie Permission models
 
-class Project extends Model
-{
-    use BelongsToTenant;
-}
-```
-
-This automatically scopes queries to the current tenant and sets `tenant_id` on create.
+**Tenant models** (no trait, run on tenant DB):
+- `Task` (and future: Product, Order, Inventory, etc.)
 
 ## Migrations
 
-Run standard migrations only:
-
-```bash
-php artisan migrate
-```
-
-Tenant data tables live in `database/migrations` and include `tenant_id` foreign keys where needed.
-Do not use tenant database migration commands for lite mode.
+- **Central migrations** in `database/migrations/` — run via `php artisan migrate`
+- **Tenant migrations** in `database/migrations/tenant/` — run via `php artisan tenants:migrate`
+- Auto-migrated on tenant creation via `TenantCreated` event
 
 ## Security Notes
 
-- Keep tenant models on `BelongsToTenant` to preserve isolation.
-- Avoid raw unscoped queries for tenant-owned data.
+- Always use `CentralConnection` trait on central models to prevent leaking to tenant DB.
+- Never query tenant models outside initialised tenant context.
 - Tenant context is derived from authenticated user state, not user-editable request input.
+- Subscription gating ensures unpaid/expired tenants cannot access protected features.
+- Feature gating (`EnsureTenantHasFeature`) controls granular plan-based access.
+
+## Domain Support
+
+- Domain model is configured but currently unused (user-based identification).
+- Switch to domain-based: use `InitializeTenancyByDomain` middleware.
+- Custom domains can be assigned via `$tenant->domains()->create(['domain' => '...'])`.
+
+## Reference
+
+For full details, see `docs/architecture/multi-tenancy.md`.

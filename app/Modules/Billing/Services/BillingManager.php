@@ -5,6 +5,7 @@ namespace App\Modules\Billing\Services;
 use App\Modules\Billing\Contracts\BillingGatewayInterface;
 use App\Modules\Billing\Enums\Gateway;
 use App\Modules\Billing\Exceptions\InvalidGatewayException;
+use Illuminate\Support\Facades\Log;
 
 class BillingManager
 {
@@ -55,9 +56,20 @@ class BillingManager
         }
 
         $driverClass = $config['driver'];
-        $driverConfig = $config['config'] ?? [];
+        $driverConfig = array_filter(
+            $config['config'] ?? [],
+            fn ($v) => $v !== null,
+        );
 
-        return app()->makeWith($driverClass, $driverConfig);
+        try {
+            return app()->makeWith($driverClass, $driverConfig);
+        } catch (\Throwable $e) {
+            Log::warning("Failed to resolve billing gateway driver: {$gateway}", [
+                'error' => $e->getMessage(),
+            ]);
+
+            return null;
+        }
     }
 
     /**

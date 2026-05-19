@@ -37,6 +37,7 @@ class Tenant extends BaseTenant implements TenantWithDatabase
             'name',
             'owner_id',
             'trial_ends_at',
+            'trial_used',
             'created_at',
             'updated_at',
             'deleted_at',
@@ -47,6 +48,7 @@ class Tenant extends BaseTenant implements TenantWithDatabase
     {
         return [
             'trial_ends_at' => 'datetime',
+            'trial_used' => 'boolean',
         ];
     }
 

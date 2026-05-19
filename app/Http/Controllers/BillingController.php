@@ -12,6 +12,7 @@ use App\Modules\Billing\Services\PlanService;
 use App\Modules\Billing\Services\SubscriptionService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -78,34 +79,51 @@ class BillingController extends Controller
             'on_generic_trial' => $tenant->trial_ends_at !== null && $tenant->trial_ends_at->isFuture(),
             'generic_trial_ends_at' => $tenant->trial_ends_at?->toISOString(),
             'available_gateways' => $this->getAvailableGateways(),
+            'trial_used' => (bool) $tenant->trial_used,
         ]);
     }
 
     public function subscribe(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'plan_id' => ['required', 'integer', 'exists:billing_plans,id'],
+            'plan_id' => ['required', 'integer', 'exists:central.billing_plans,id'],
             'gateway' => ['required', 'string'],
-            'billing_cycle' => ['nullable', 'string', 'in:daily,weekly,monthly,quarterly,yearly'],
+            'billing_cycle' => ['nullable', 'string', 'in:daily,weekly,month,monthly,quarterly,year,yearly'],
         ]);
 
         /** @var Tenant $tenant */
         $tenant = tenant();
+
+        $plan = $this->planService->findOrFail($validated['plan_id']);
+
+        if (! $this->isGatewayConfigured($validated['gateway'])) {
+            return response()->json([
+                'error' => 'This payment method is not configured. Please contact support.',
+            ], 422);
+        }
+
+        $billingCycleMap = [
+            'month' => 'monthly',
+            'year' => 'yearly',
+        ];
+
+        $billingCycleValue = $validated['billing_cycle'] ?? null;
+        $normalizedCycle = $billingCycleMap[$billingCycleValue] ?? $billingCycleValue;
 
         try {
             $result = $this->subscriptionService->createSubscription(
                 tenantId: $tenant->id,
                 planId: $validated['plan_id'],
                 gateway: $validated['gateway'],
-                billingCycle: isset($validated['billing_cycle'])
-                    ? BillingCycle::from($validated['billing_cycle'])
+                billingCycle: $normalizedCycle
+                    ? BillingCycle::from($normalizedCycle)
                     : null,
                 options: [
-                    'success_url' => route('billing').'?checkout=success',
+                    'success_url' => route('billing.success.sslcommerz'),
                     'cancel_url' => route('billing').'?checkout=cancelled',
                     'customer_name' => $tenant->name,
                     'customer_email' => $request->user()?->email,
-                    'product_name' => $result['subscription']->plan?->name ?? 'Subscription',
+                    'product_name' => $plan->name ?? 'Subscription',
                     'metadata' => [
                         'tenant_id' => $tenant->id,
                     ],
@@ -142,11 +160,18 @@ class BillingController extends Controller
     public function invoices(Request $request): Response
     {
         /** @var Tenant $tenant */
-        $tenant = tenant();
+        $tenant = tenant()->load('owner');
 
         $payments = $this->paymentService->getTenantPayments($tenant->id);
 
-        $invoices = $payments->map(function ($payment) {
+        $customerName = $tenant->owner?->name ?? $tenant->name ?? 'Valued Customer';
+        $companyName = $tenant->name ?? 'Souda';
+
+        $invoices = $payments->map(function ($payment) use ($customerName, $companyName) {
+            $subscription = $payment->subscription;
+            $periodStart = $subscription?->starts_at;
+            $periodEnd = $subscription?->expires_at;
+
             return [
                 'id' => $payment->id,
                 'invoice_number' => $this->invoiceService->generateInvoiceNumber($payment),
@@ -156,6 +181,12 @@ class BillingController extends Controller
                 'status' => $payment->status->value,
                 'paid_at' => $payment->paid_at?->toISOString(),
                 'created_at' => $payment->created_at->toISOString(),
+                'customer_name' => $customerName,
+                'company_name' => $companyName,
+                'app_name' => config('app.name', 'Souda'),
+                'period_start' => $periodStart?->toISOString(),
+                'period_end' => $periodEnd?->toISOString(),
+                'billing_cycle' => $subscription?->billing_cycle?->value,
             ];
         });
 
@@ -190,18 +221,89 @@ class BillingController extends Controller
         }
     }
 
+    public function sslcommerzSuccess(Request $request)
+    {
+        $transactionId = $request->input('tran_id');
+
+        if (! $transactionId) {
+            return redirect()->route('billing')->with('error', 'Payment verification failed.');
+        }
+
+        try {
+            $this->subscriptionService->verifyAndActivate(
+                transactionId: $transactionId,
+                gateway: 'sslcommerz',
+                payload: $request->all(),
+            );
+
+            return redirect()->route('billing', ['checkout' => 'success']);
+        } catch (\Throwable $e) {
+            Log::error('SSLCommerz success callback failed', [
+                'tran_id' => $transactionId,
+                'error' => $e->getMessage(),
+            ]);
+
+            return redirect()->route('billing', ['checkout' => 'cancelled']);
+        }
+    }
+
+    public function sslcommerzWebhook(Request $request)
+    {
+        $transactionId = $request->input('tran_id');
+
+        if (! $transactionId) {
+            return response('Missing transaction ID', 400);
+        }
+
+        try {
+            $this->subscriptionService->verifyAndActivate(
+                transactionId: $transactionId,
+                gateway: 'sslcommerz',
+                payload: $request->all(),
+            );
+
+            return response('OK', 200);
+        } catch (\Throwable $e) {
+            Log::error('SSLCommerz webhook verification failed', [
+                'tran_id' => $transactionId,
+                'error' => $e->getMessage(),
+            ]);
+
+            return response('Verification failed', 400);
+        }
+    }
+
     private function getAvailableGateways(): array
     {
         $gateways = config('billing.gateways', []);
         $available = [];
 
         foreach ($gateways as $key => $config) {
-            $available[] = [
-                'id' => $key,
-                'label' => $config['label'] ?? ucfirst($key),
-            ];
+            $isConfigured = $this->isGatewayConfigured($key, $config['config'] ?? []);
+
+            if ($isConfigured) {
+                $available[] = [
+                    'id' => $key,
+                    'label' => $config['label'] ?? ucfirst($key),
+                ];
+            }
         }
 
         return $available;
+    }
+
+    private function isGatewayConfigured(string $gateway, ?array $config = null): bool
+    {
+        $config ??= config("billing.gateways.{$gateway}.config", []);
+
+        return match ($gateway) {
+            'stripe' => filled($config['secretKey'] ?? $config['secret_key'] ?? null),
+            'sslcommerz' => filled($config['storeId'] ?? null) && filled($config['storePassword'] ?? null),
+            'bkash' => filled($config['appKey'] ?? null) && filled($config['appSecret'] ?? null),
+            'nagad' => filled($config['merchantId'] ?? null) && filled($config['privateKey'] ?? null),
+            'portwallet' => filled($config['apiKey'] ?? null) && filled($config['apiSecret'] ?? null),
+            'manual' => true,
+            default => false,
+        };
     }
 }

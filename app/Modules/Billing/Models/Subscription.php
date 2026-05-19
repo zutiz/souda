@@ -2,6 +2,7 @@
 
 namespace App\Modules\Billing\Models;
 
+use App\Models\Tenant;
 use App\Modules\Billing\Enums\BillingCycle;
 use App\Modules\Billing\Enums\SubscriptionStatus;
 use Illuminate\Database\Eloquent\Builder;
@@ -39,6 +40,14 @@ class Subscription extends Model
     public function plan(): BelongsTo
     {
         return $this->belongsTo(Plan::class, 'plan_id');
+    }
+
+    /**
+     * The tenant this subscription belongs to.
+     */
+    public function tenant(): BelongsTo
+    {
+        return $this->belongsTo(Tenant::class, 'tenant_id');
     }
 
     /**

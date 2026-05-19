@@ -59,9 +59,9 @@ return [
             'driver' => SSLCommerzDriver::class,
             'label' => 'SSLCommerz',
             'config' => [
-                'store_id' => env('SSLC_STORE_ID'),
-                'store_password' => env('SSLC_STORE_PASSWORD'),
-                'sandbox' => env('SSLC_SANDBOX', true),
+                'storeId' => env('SSLC_STORE_ID'),
+                'storePassword' => env('SSLC_STORE_PASSWORD'),
+                'isSandbox' => env('SSLC_SANDBOX', true),
             ],
         ],
 
@@ -71,9 +71,9 @@ return [
             'config' => [
                 'username' => env('BKASH_USERNAME'),
                 'password' => env('BKASH_PASSWORD'),
-                'app_key' => env('BKASH_APP_KEY'),
-                'app_secret' => env('BKASH_APP_SECRET'),
-                'sandbox' => env('BKASH_SANDBOX', true),
+                'appKey' => env('BKASH_APP_KEY'),
+                'appSecret' => env('BKASH_APP_SECRET'),
+                'isSandbox' => env('BKASH_SANDBOX', true),
             ],
         ],
 
@@ -81,10 +81,10 @@ return [
             'driver' => NagadDriver::class,
             'label' => 'Nagad',
             'config' => [
-                'merchant_id' => env('NAGAD_MERCHANT_ID'),
-                'public_key' => env('NAGAD_PUBLIC_KEY'),
-                'private_key' => env('NAGAD_PRIVATE_KEY'),
-                'sandbox' => env('NAGAD_SANDBOX', true),
+                'merchantId' => env('NAGAD_MERCHANT_ID'),
+                'publicKey' => env('NAGAD_PUBLIC_KEY'),
+                'privateKey' => env('NAGAD_PRIVATE_KEY'),
+                'isSandbox' => env('NAGAD_SANDBOX', true),
             ],
         ],
 
@@ -92,9 +92,9 @@ return [
             'driver' => PortWalletDriver::class,
             'label' => 'PortWallet',
             'config' => [
-                'api_key' => env('PORTWALLET_API_KEY'),
-                'api_secret' => env('PORTWALLET_API_SECRET'),
-                'sandbox' => env('PORTWALLET_SANDBOX', true),
+                'apiKey' => env('PORTWALLET_API_KEY'),
+                'apiSecret' => env('PORTWALLET_API_SECRET'),
+                'isSandbox' => env('PORTWALLET_SANDBOX', true),
             ],
         ],
 

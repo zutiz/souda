@@ -34,6 +34,17 @@ class UserFactory extends Factory
         ];
     }
 
+    public function configure(): static
+    {
+        return $this->afterCreating(function (User $user) {
+            if ($user->tenant_id) {
+                Tenant::where('id', $user->tenant_id)
+                    ->whereNull('owner_id')
+                    ->update(['owner_id' => $user->id]);
+            }
+        });
+    }
+
     /**
      * Indicate that the model's email address should be unverified.
      */

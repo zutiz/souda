@@ -1,4 +1,4 @@
-# SaaS Forge Kit Lite
+# Souda
 
 Open-source Laravel + Inertia React SaaS starter kit focused on a clean lite baseline:
 
@@ -25,11 +25,11 @@ Pro-only features:
 ## Tech Stack
 
 - PHP 8.4+
-- Laravel 12
+- Laravel 13
 - Inertia.js v2 + React + TypeScript
 - Tailwind CSS v4
 - Laravel Cashier (Stripe)
-- Stancl Tenancy (single DB mode)
+- Stancl Tenancy (multi-teancy DB mode)
 - Pest
 
 ## Quick Start

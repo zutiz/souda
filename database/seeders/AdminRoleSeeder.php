@@ -26,5 +26,9 @@ class AdminRoleSeeder extends Seeder
         if (! $admin->hasRole('admin')) {
             $admin->assignRole($role);
         }
+
+        if ($admin->tenant && ! $admin->tenant->owner_id) {
+            $admin->tenant->update(['owner_id' => $admin->id]);
+        }
     }
 }

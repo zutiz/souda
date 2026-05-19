@@ -44,14 +44,17 @@ class SubscriptionService
             ? ($plan->yearly_price ?? $plan->monthly_price * 12)
             : $plan->monthly_price;
 
-        if ($plan->trial_enabled && $plan->trial_without_card) {
+        $tenant = tenant();
+        $trialAvailable = $plan->trial_enabled && ! $tenant->trial_used;
+
+        if ($trialAvailable && $plan->trial_without_card) {
             $status = SubscriptionStatus::Trial;
         } else {
             $status = SubscriptionStatus::PendingPayment;
         }
 
         $now = now();
-        $trialEndsAt = $plan->trial_enabled
+        $trialEndsAt = $trialAvailable
             ? $now->copy()->addDays($plan->trial_days)
             : null;
 
@@ -149,6 +152,10 @@ class SubscriptionService
             'expires_at' => $expiresAt,
             'next_billing_at' => $expiresAt,
         ]);
+
+        if ($wasTrial || $subscription->trial_ends_at) {
+            tenant()->update(['trial_used' => true]);
+        }
 
         SubscriptionActivated::dispatch($subscription, $wasTrial);
     }

@@ -24,6 +24,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->validateCsrfTokens(except: [
             'stripe/*',
             'billing/webhook/*',
+            'billing/success/sslcommerz',
         ]);
 
         $middleware->web(append: [
