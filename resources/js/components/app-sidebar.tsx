@@ -3,6 +3,7 @@ import {
     CreditCard,
     LayoutGrid,
     ListTodo,
+    Package,
     PanelLeft,
     Settings,
     Users,
@@ -17,8 +18,6 @@ import {
     Sidebar,
     SidebarContent,
     SidebarFooter,
-    SidebarGroup,
-    SidebarGroupLabel,
     SidebarHeader,
     SidebarMenu,
     SidebarMenuButton,
@@ -32,25 +31,21 @@ const adminNavItems: NavItem[] = [
         title: 'Dashboard',
         href: AdminDashboard.url(),
         icon: PanelLeft,
-        prefetch: false,
     },
     {
         title: 'Users',
         href: usersIndex(),
         icon: Users,
-        prefetch: false,
     },
     {
         title: 'Pricing',
         href: pricingIndex(),
         icon: CreditCard,
-        prefetch: false,
     },
     {
         title: 'Settings',
         href: adminSettingsGeneral(),
         icon: Settings,
-        prefetch: false,
     },
 ];
 
@@ -73,6 +68,22 @@ export function AppSidebar() {
         },
     ];
 
+    const productNavItems: NavItem[] = [
+        {
+            title: 'Products',
+            href: '/products',
+            icon: Package,
+            items: [
+                { title: 'All Products', href: '/products' },
+                { title: 'Categories', href: '/products/categories' },
+                { title: 'Brands', href: '/products/brands' },
+                { title: 'Attributes', href: '/products/attributes' },
+                { title: 'Inventory', href: '/products/inventory' },
+                { title: 'Stock Transfers', href: '/products/stock-transfers' },
+            ],
+        },
+    ];
+
     return (
         <Sidebar collapsible="icon" variant="inset">
             <SidebarHeader>
@@ -89,6 +100,7 @@ export function AppSidebar() {
 
             <SidebarContent>
                 <NavMain items={mainNavItems} />
+                <NavMain items={productNavItems} label="Products" />
             </SidebarContent>
 
             <SidebarFooter>

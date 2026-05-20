@@ -54,8 +54,8 @@ class SeatService
 
         $overage = $this->getOverageCount($tenantId, $plan);
 
-        return DB::connection('central')->transaction(function () use (
-            $tenantId, $seatType, $userId, $email, $invitationToken, $subscriptionId, $overage
+        $allocation = DB::connection('central')->transaction(function () use (
+            $tenantId, $seatType, $userId, $email, $invitationToken, $subscriptionId
         ) {
             $allocation = SeatAllocation::create([
                 'tenant_id' => $tenantId,
@@ -70,33 +70,35 @@ class SeatService
                 'metadata' => [],
             ]);
 
-            $isOverage = $overage > 0;
-
-            Log::info('Seat allocated', [
-                'tenant_id' => $tenantId,
-                'seat_id' => $allocation->id,
-                'seat_type' => $seatType->value,
-                'is_overage' => $isOverage,
-            ]);
-
-            SeatAllocated::dispatch($allocation, $isOverage);
-
             return $allocation;
         });
+
+        $isOverage = $overage > 0;
+
+        Log::info('Seat allocated', [
+            'tenant_id' => $tenantId,
+            'seat_id' => $allocation->id,
+            'seat_type' => $seatType->value,
+            'is_overage' => $isOverage,
+        ]);
+
+        SeatAllocated::dispatch($allocation, $isOverage);
+
+        return $allocation;
     }
 
     public function releaseSeat(SeatAllocation $allocation): void
     {
         DB::connection('central')->transaction(function () use ($allocation) {
             $allocation->release();
-
-            Log::info('Seat released', [
-                'tenant_id' => $allocation->tenant_id,
-                'seat_id' => $allocation->id,
-            ]);
-
-            SeatReleased::dispatch($allocation);
         });
+
+        Log::info('Seat released', [
+            'tenant_id' => $allocation->tenant_id,
+            'seat_id' => $allocation->id,
+        ]);
+
+        SeatReleased::dispatch($allocation);
     }
 
     public function releaseSeatByUser(string $tenantId, int $userId): void

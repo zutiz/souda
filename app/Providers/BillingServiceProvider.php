@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Providers;
 
 use App\Http\Middleware\EnsureTenantHasFeature;
@@ -10,6 +12,7 @@ use App\Modules\Billing\Events\SubscriptionActivated;
 use App\Modules\Billing\Events\SubscriptionCancelled;
 use App\Modules\Billing\Events\SubscriptionExpired;
 use App\Modules\Billing\Http\Middleware\EnsureSeatAvailable;
+use App\Modules\Billing\Listeners\GenerateInvoice;
 use App\Modules\Billing\Listeners\SendSubscriptionNotification;
 use App\Modules\Billing\Services\BillingManager;
 use App\Modules\Billing\Services\InvoiceService;
@@ -23,9 +26,6 @@ use Illuminate\Support\ServiceProvider;
 
 class BillingServiceProvider extends ServiceProvider
 {
-    /**
-     * Register any application services.
-     */
     public function register(): void
     {
         $this->mergeConfigFrom(config_path('billing.php'), 'billing');
@@ -50,9 +50,6 @@ class BillingServiceProvider extends ServiceProvider
         $this->app->singleton(OverageInvoiceService::class);
     }
 
-    /**
-     * Bootstrap any application services.
-     */
     public function boot(): void
     {
         $this->loadMigrationsFrom(database_path('migrations'));
@@ -69,9 +66,6 @@ class BillingServiceProvider extends ServiceProvider
         $this->registerEventListeners();
     }
 
-    /**
-     * Register billing event listeners.
-     */
     private function registerEventListeners(): void
     {
         $events = $this->app->make('events');
@@ -101,6 +95,11 @@ class BillingServiceProvider extends ServiceProvider
         $events->listen(
             SubscriptionCancelled::class,
             [$listener, 'handleSubscriptionCancelled']
+        );
+
+        $events->listen(
+            PaymentReceived::class,
+            GenerateInvoice::class,
         );
     }
 }
