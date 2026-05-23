@@ -12,6 +12,7 @@ use App\Modules\Product\Services\BrandService;
 use App\Modules\Product\Services\CategoryService;
 use App\Modules\Product\Services\ProductService;
 use App\Modules\Product\ValueObjects\ProductSearchCriteria;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -19,6 +20,8 @@ use Inertia\Response;
 
 class ProductController
 {
+    use AuthorizesRequests;
+
     public function __construct(
         protected ProductService $productService,
         protected CategoryService $categoryService,
@@ -46,10 +49,12 @@ class ProductController
 
     public function store(StoreProductRequest $request): RedirectResponse
     {
+        $this->authorize('create', Product::class);
+
         $dto = ProductDTO::fromRequest($request->validated());
         $product = $this->productService->createProduct($dto);
 
-        return redirect()->route('products.show', $product)
+        return redirect()->route('products.index')
             ->with('success', 'Product created successfully.');
     }
 
@@ -75,6 +80,8 @@ class ProductController
 
     public function update(UpdateProductRequest $request, Product $product): RedirectResponse
     {
+        $this->authorize('update', $product);
+
         $dto = ProductDTO::fromRequest($request->validated());
         $this->productService->updateProduct($product, $dto);
 
@@ -84,6 +91,8 @@ class ProductController
 
     public function destroy(Product $product): RedirectResponse
     {
+        $this->authorize('delete', $product);
+
         $this->productService->deleteProduct($product);
 
         return redirect()->route('products.index')

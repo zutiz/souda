@@ -8,7 +8,7 @@ use Illuminate\Support\Facades\DB;
 
 trait RefreshMultiDatabase
 {
-    protected bool $migratedCentral = false;
+    protected static bool $migratedCentral = false;
 
     protected array $createdTenantDatabases = [];
 
@@ -38,7 +38,11 @@ trait RefreshMultiDatabase
      */
     protected function refreshDatabase(): void
     {
-        if (! $this->migratedCentral) {
+        if (tenancy()->initialized) {
+            tenancy()->end();
+        }
+
+        if (! static::$migratedCentral) {
             $this->artisan('migrate:fresh', [
                 '--database' => 'central',
                 '--path' => 'database/migrations',
@@ -47,7 +51,7 @@ trait RefreshMultiDatabase
 
             $this->app[Kernel::class]->setArtisan(null);
 
-            $this->migratedCentral = true;
+            static::$migratedCentral = true;
         }
 
         $this->dropTenantDatabases();

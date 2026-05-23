@@ -1,4 +1,4 @@
-import type { UseFormReturn } from 'react-hook-form';
+import { useWatch, type UseFormReturn } from 'react-hook-form';
 import { FormSection } from '@/modules/shared/components/form-section';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
@@ -13,10 +13,12 @@ type Props = {
 };
 
 export function ProductPricingSection({ form, errors, onChange }: Props) {
-    const price = form.watch('price');
-    const comparePrice = form.watch('comparePrice');
+    const price = useWatch({ control: form.control, name: 'price' }) as number;
+    const comparePrice = useWatch({ control: form.control, name: 'comparePrice' }) as number | null;
+    const costPrice = useWatch({ control: form.control, name: 'costPrice' }) as number | null;
+    const isTaxable = useWatch({ control: form.control, name: 'isTaxable' }) as boolean;
 
-    const hasDiscount = comparePrice && comparePrice > price;
+    const hasDiscount = comparePrice != null && price != null && comparePrice > price;
 
     return (
         <FormSection title="Pricing" description="Set product pricing and tax configuration">
@@ -30,7 +32,7 @@ export function ProductPricingSection({ form, errors, onChange }: Props) {
                             type="number"
                             step="0.01"
                             min="0"
-                            value={price || ''}
+                            value={price ?? ''}
                             onChange={(e) => onChange('price', e.target.valueAsNumber || 0)}
                             className="pl-7"
                         />
@@ -54,7 +56,7 @@ export function ProductPricingSection({ form, errors, onChange }: Props) {
                     </div>
                     {hasDiscount && (
                         <p className="text-positive text-xs">
-                            {Math.round((1 - price / comparePrice) * 100)}% off
+                            {Math.round((1 - price! / comparePrice!) * 100)}% off
                         </p>
                     )}
                     <FieldError error={errors.comparePrice} />
@@ -69,14 +71,14 @@ export function ProductPricingSection({ form, errors, onChange }: Props) {
                             type="number"
                             step="0.01"
                             min="0"
-                            value={form.watch('costPrice') ?? ''}
+                            value={costPrice ?? ''}
                             onChange={(e) => onChange('costPrice', e.target.valueAsNumber || null)}
                             className="pl-7"
                         />
                     </div>
-                    {price > 0 && form.watch('costPrice') && (
+                    {price != null && price > 0 && costPrice != null && (
                         <p className="text-muted-foreground text-xs">
-                            Margin: {formatMargin(price, form.watch('costPrice')!)}
+                            Margin: {formatMargin(price, costPrice)}
                         </p>
                     )}
                     <FieldError error={errors.costPrice} />
@@ -86,7 +88,7 @@ export function ProductPricingSection({ form, errors, onChange }: Props) {
             <div className="flex items-center gap-3">
                 <Switch
                     id="isTaxable"
-                    checked={form.watch('isTaxable')}
+                    checked={isTaxable}
                     onCheckedChange={(checked) => onChange('isTaxable', checked)}
                 />
                 <Label htmlFor="isTaxable" className="cursor-pointer">Charge tax on this product</Label>

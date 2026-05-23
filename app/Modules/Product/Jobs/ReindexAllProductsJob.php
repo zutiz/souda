@@ -16,20 +16,11 @@ class ReindexAllProductsJob implements ShouldBeUnique, ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
-    public $queue = 'low';
-
-    public $tries = 1;
-
     public $timeout = 600;
 
     public function __construct()
     {
         $this->onQueue('low');
-    }
-
-    public function uniqueId(): string
-    {
-        return 'product-reindex-'.tenant()->id;
     }
 
     public function handle(): void

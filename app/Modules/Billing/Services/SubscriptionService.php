@@ -169,6 +169,14 @@ class SubscriptionService
         $gatewayDriver = $this->billingManager->driver($gateway);
         $paymentDTO = $gatewayDriver->verifyPayment($transactionId, $payload);
 
+        if ($paymentDTO->status === 'failed') {
+            throw new PaymentFailedException(
+                message: 'Payment verification failed: '.($paymentDTO->message ?? 'Gateway returned failure status'),
+                gateway: $gateway,
+                transactionId: $transactionId,
+            );
+        }
+
         $payment = $this->paymentService->findByTransactionId($transactionId);
         $subscription = $payment?->subscription;
 
@@ -181,15 +189,28 @@ class SubscriptionService
         }
 
         if ($payment->status === PaymentStatus::Completed) {
-            // Already completed — no-op.
             return $subscription;
         }
 
         $payment->markAsCompleted($paymentDTO->transactionId);
 
-        PaymentReceived::dispatch($payment, $subscription);
+        try {
+            PaymentReceived::dispatch($payment, $subscription);
+        } catch (\Throwable $e) {
+            Log::warning('PaymentReceived event failed, but payment is already marked completed', [
+                'payment_id' => $payment->id,
+                'error' => $e->getMessage(),
+            ]);
+        }
 
-        $this->activateSubscription($subscription);
+        try {
+            $this->activateSubscription($subscription);
+        } catch (\Throwable $e) {
+            Log::warning('Subscription activation event failed, but subscription is already active', [
+                'subscription_id' => $subscription->id,
+                'error' => $e->getMessage(),
+            ]);
+        }
 
         return $subscription->fresh();
     }

@@ -2,6 +2,7 @@ import { useCallback, useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { router } from '@inertiajs/react';
+import { mapFormToPayload } from '../lib/map-product';
 import {
     productFormSchema,
     defaultProductFormValues,
@@ -61,16 +62,15 @@ export function useProductForm({ initialData, route, method = 'post', onSuccess,
                     setProcessing(true);
                     setServerErrors({});
 
-                    const submit = method === 'put' ? router.put : router.post;
-                    const payload = data as unknown as Record<string, unknown>;
+                    const payload = mapFormToPayload(data as ProductFormData);
 
-                    submit(route, payload, {
+                    const options = {
                         preserveScroll: true,
                         onSuccess: () => {
                             setProcessing(false);
                             onSuccess?.();
                         },
-                        onError: (inertiaErrors) => {
+                        onError: (inertiaErrors: Record<string, string>) => {
                             setProcessing(false);
                             const mapped = mapServerErrors(inertiaErrors);
                             setServerErrors(mapped);
@@ -79,7 +79,13 @@ export function useProductForm({ initialData, route, method = 'post', onSuccess,
                         onFinish: () => {
                             setProcessing(false);
                         },
-                    });
+                    };
+
+                    if (method === 'put') {
+                        router.put(route, payload, options);
+                    } else {
+                        router.post(route, payload, options);
+                    }
                 },
                 () => {},
             )(e);

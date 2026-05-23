@@ -15,15 +15,15 @@ class RemoveProductIndexJob implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
-    public $queue = 'default';
-
     public $tries = 3;
 
     public $backoff = [10, 30, 60];
 
     public function __construct(
         public string $productId,
-    ) {}
+    ) {
+        $this->onQueue('default');
+    }
 
     public function handle(): void
     {

@@ -159,6 +159,22 @@ ProductCreate
 └── UnsavedChangesDialog (on navigate away)
 ```
 
+### Form Architecture
+
+The form uses Inertia's `useForm` hook for state management and submission. Before sending to the server, `mapFormToPayload()` converts camelCase form fields to snake_case:
+
+| Form Field | Server Key | Notes |
+|------------|-----------|-------|
+| `price` | `base_price` | ×100 (cents) |
+| `categoryId` | `category_id` | — |
+| `isTaxable` | `tax_inclusive` | — |
+| `trackStock` | `track_inventory` | — |
+| `freeShipping` | `free_shipping` | — |
+| `type` | `type` | hardcoded `'simple'` in current payload |
+
+- `router.post()` / `router.put()` are called **inline** (not assigned to a variable) to preserve `this` binding required by Inertia's internal `visit()`.
+- React Compiler auto-memoizes component code; `useWatch()` hook is used instead of `form.watch()` method to ensure field reactivity (hooks are recognized as reactive by the compiler, methods are not).
+
 ### Form Complexity
 - 8 sections, ~30+ fields
 - Nested field arrays for variants

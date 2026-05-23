@@ -16,13 +16,13 @@ class GenerateProductSKUsJob implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
-    public $queue = 'default';
-
     public $tries = 3;
 
     public function __construct(
         public string $productId,
-    ) {}
+    ) {
+        $this->onQueue('default');
+    }
 
     public function handle(SKUGenerator $skuGenerator): void
     {

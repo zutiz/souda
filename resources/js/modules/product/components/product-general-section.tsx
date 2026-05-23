@@ -1,4 +1,4 @@
-import type { UseFormReturn } from 'react-hook-form';
+import { useWatch, type UseFormReturn } from 'react-hook-form';
 import { FormSection } from '@/modules/shared/components/form-section';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -15,6 +15,12 @@ type Props = {
 };
 
 export function ProductGeneralSection({ form, categories, brands, errors, onChange }: Props) {
+    const name = useWatch({ control: form.control, name: 'name' }) as string;
+    const status = useWatch({ control: form.control, name: 'status' }) as 'draft' | 'active';
+    const description = useWatch({ control: form.control, name: 'description' }) as string | undefined;
+    const categoryId = useWatch({ control: form.control, name: 'categoryId' }) as string | null | undefined;
+    const brandId = useWatch({ control: form.control, name: 'brandId' }) as string | null | undefined;
+
     return (
         <FormSection title="General Information" description="Basic product details">
             <div className="grid gap-5 sm:grid-cols-2">
@@ -22,7 +28,7 @@ export function ProductGeneralSection({ form, categories, brands, errors, onChan
                     <Label htmlFor="name">Product Name</Label>
                     <Input
                         id="name"
-                        value={form.watch('name')}
+                        value={name}
                         onChange={(e) => onChange('name', e.target.value)}
                         placeholder="Enter product name"
                     />
@@ -33,7 +39,7 @@ export function ProductGeneralSection({ form, categories, brands, errors, onChan
                     <Label htmlFor="status">Status</Label>
                     <select
                         id="status"
-                        value={form.watch('status')}
+                        value={status}
                         onChange={(e) => onChange('status', e.target.value as 'draft' | 'active')}
                         className="border-input flex h-9 w-full rounded-md border bg-transparent px-3 py-1 text-sm shadow-xs"
                     >
@@ -48,7 +54,7 @@ export function ProductGeneralSection({ form, categories, brands, errors, onChan
                 <Label htmlFor="description">Description</Label>
                 <Textarea
                     id="description"
-                    value={form.watch('description') ?? ''}
+                    value={description ?? ''}
                     onChange={(e) => onChange('description', e.target.value)}
                     placeholder="Enter product description"
                     rows={4}
@@ -61,7 +67,7 @@ export function ProductGeneralSection({ form, categories, brands, errors, onChan
                     <Label htmlFor="categoryId">Category</Label>
                     <select
                         id="categoryId"
-                        value={form.watch('categoryId') ?? ''}
+                        value={categoryId ?? ''}
                         onChange={(e) => onChange('categoryId', e.target.value || null)}
                         className="border-input flex h-9 w-full rounded-md border bg-transparent px-3 py-1 text-sm shadow-xs"
                     >
@@ -79,7 +85,7 @@ export function ProductGeneralSection({ form, categories, brands, errors, onChan
                     <Label htmlFor="brandId">Brand</Label>
                     <select
                         id="brandId"
-                        value={form.watch('brandId') ?? ''}
+                        value={brandId ?? ''}
                         onChange={(e) => onChange('brandId', e.target.value || null)}
                         className="border-input flex h-9 w-full rounded-md border bg-transparent px-3 py-1 text-sm shadow-xs"
                     >

@@ -52,7 +52,7 @@ class ProductService
             'length' => $dto->dimensions['length'] ?? null,
             'width' => $dto->dimensions['width'] ?? null,
             'height' => $dto->dimensions['height'] ?? null,
-            'metadata' => null,
+            'metadata' => $dto->metadata ?? null,
             'published_at' => $dto->publishedAt,
         ]);
 

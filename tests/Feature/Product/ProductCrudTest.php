@@ -2,14 +2,29 @@
 
 declare(strict_types=1);
 
+use App\Http\Middleware\EnsureTenantHasSubscription;
+use App\Http\Middleware\InitializeTenancyByUser;
+use App\Models\Permission;
 use App\Models\User;
 use App\Modules\Product\Models\Product;
 
 beforeEach(function () {
-    $this->user = User::factory()->create();
+    Permission::firstOrCreate(['name' => 'products.view']);
+    Permission::firstOrCreate(['name' => 'products.create']);
+    Permission::firstOrCreate(['name' => 'products.update']);
+    Permission::firstOrCreate(['name' => 'products.delete']);
+
+    $this->user = User::factory()->subscribed()->create();
     $this->user->givePermissionTo('products.view', 'products.create', 'products.update', 'products.delete');
 
-    actingAs($this->user);
+    tenancy()->initialize($this->user->tenant);
+
+    $this->withoutMiddleware([
+        InitializeTenancyByUser::class,
+        EnsureTenantHasSubscription::class,
+    ]);
+
+    $this->actingAs($this->user);
 });
 
 test('authenticated user can create a product', function () {

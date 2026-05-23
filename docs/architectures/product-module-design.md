@@ -324,6 +324,7 @@ The Product module exposes contracts (`ProductResolver`, `StockChecker`, `Pricin
 |------|-------|------|
 | Product List | `products.index` | `resources/js/pages/Product/Index.tsx` |
 | Product Create | `products.create` | `resources/js/pages/Product/Create.tsx` |
+| Product Detail | `products.show` | `resources/js/pages/Product/Show.tsx` |
 | Product Edit | `products.edit` | `resources/js/pages/Product/Edit.tsx` |
 | Categories | `categories.index` | `resources/js/pages/Product/Category/Index.tsx` |
 | Category Detail | `categories.show` | `resources/js/pages/Product/Category/Show.tsx` |
@@ -386,19 +387,31 @@ User redirected → Next request → Middleware finds DB → Tenancy initialized
 | **Idempotent provisioning** | Listener checks if DB exists before creating |
 | **Sync provisioning** | DB ready before user is redirected |
 
+## Authorization Enforcement
+
+`ProductController` uses the `AuthorizesRequests` trait and explicitly calls `$this->authorize('create', Product::class)`, `$this->authorize('update', $product)`, and `$this->authorize('delete', $product)` in `store()`, `update()`, and `destroy()` respectively. This enforces the `ProductPolicy` gates defined in `app/Modules/Product/Policies/ProductPolicy.php`.
+
+**Permissions are stored in the central database.** Custom `App\Models\Permission` and `App\Models\Role` models extend Spatie's stock models with the `CentralConnection` trait, ensuring all authorization lookups always target the central DB. Permissions are seeded via `database/seeders/RolePermissionSeeder.php`, which creates product permissions (`products.view`, `products.create`, `products.update`, `products.delete`, `products.archive`, `products.publish`, `products.duplicate`, `products.import`, `products.export`) and syncs them to the `admin` role.
+
+Other controllers (`CategoryController`, `BrandController`, etc.) should follow the same pattern to enforce their respective policies via `$this->authorize()` calls.
+
+### Circular Category Reference
+
+The `StoreCategoryRequest` validates `parent_id` via `withValidator()` — checking that a category cannot be set as its own parent. `CategoryService::validateParent()` throws `CircularCategoryException` as a safety net for circular chain detection.
+
 ## Summary
 
 The Product Management module is correctly designed for tenant database isolation:
 
 - ✅ **19 tenant migrations** — all under tenant DB
 - ✅ **17 tenant models** — no CentralConnection, auto-resolve to tenant DB
-- ✅ **10 controllers** — behind tenancy + subscription middleware
+- ✅ **10 controllers** — behind tenancy + subscription middleware, `ProductController` enforces `AuthorizesRequests`
 - ✅ **7 service contracts** — for cross-module consumption
 - ✅ **14 domain events** — for decoupled cross-module communication
 - ✅ **13 listeners** — including `DeductProductStock` (Order→Inventory bridge)
 - ✅ **8 queued jobs** — for async operations (import, export, search indexing)
 - ✅ **4 observers** — for model lifecycle hooks
-- ✅ **4 authorization policies** — for fine-grained access control
-- ✅ **9 frontend pages** — Inertia React SPA pages
+- ✅ **4 authorization policies** — enforced via `$this->authorize()` in `ProductController`
+- ✅ **10 frontend pages** — Inertia React SPA pages
 - ✅ **No central product tables** — zero product data in central DB
 - ✅ **Tenant DB provisioned on subscription** — not on registration or login

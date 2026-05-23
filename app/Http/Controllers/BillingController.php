@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Tenant;
 use App\Modules\Billing\Enums\BillingCycle;
+use App\Modules\Billing\Enums\PaymentStatus;
 use App\Modules\Billing\Enums\SubscriptionStatus;
 use App\Modules\Billing\Models\Subscription;
 use App\Modules\Billing\Services\InvoiceService;
@@ -247,6 +248,12 @@ class BillingController extends Controller
             return redirect()->route('billing')->with('error', 'Payment verification failed.');
         }
 
+        $payment = $this->paymentService->findByTransactionId($transactionId);
+
+        if ($payment && $payment->status === PaymentStatus::Completed) {
+            return redirect()->route('billing', ['checkout' => 'success']);
+        }
+
         try {
             $this->subscriptionService->verifyAndActivate(
                 transactionId: $transactionId,
@@ -260,6 +267,12 @@ class BillingController extends Controller
                 'tran_id' => $transactionId,
                 'error' => $e->getMessage(),
             ]);
+
+            $payment = $this->paymentService->findByTransactionId($transactionId);
+
+            if ($payment && $payment->status === PaymentStatus::Completed) {
+                return redirect()->route('billing', ['checkout' => 'success']);
+            }
 
             return redirect()->route('billing', ['checkout' => 'cancelled']);
         }

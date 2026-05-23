@@ -2,15 +2,30 @@
 
 declare(strict_types=1);
 
+use App\Http\Middleware\EnsureTenantHasSubscription;
+use App\Http\Middleware\InitializeTenancyByUser;
+use App\Models\Permission;
 use App\Models\User;
 use App\Modules\Product\Models\Category;
 use App\Modules\Product\Models\Product;
 
 beforeEach(function () {
-    $this->user = User::factory()->create();
+    Permission::firstOrCreate(['name' => 'categories.view']);
+    Permission::firstOrCreate(['name' => 'categories.create']);
+    Permission::firstOrCreate(['name' => 'categories.update']);
+    Permission::firstOrCreate(['name' => 'categories.delete']);
+
+    $this->user = User::factory()->subscribed()->create();
     $this->user->givePermissionTo('categories.view', 'categories.create', 'categories.update', 'categories.delete');
 
-    actingAs($this->user);
+    tenancy()->initialize($this->user->tenant);
+
+    $this->withoutMiddleware([
+        InitializeTenancyByUser::class,
+        EnsureTenantHasSubscription::class,
+    ]);
+
+    $this->actingAs($this->user);
 });
 
 test('user can create nested categories', function () {

@@ -1,4 +1,4 @@
-import type { UseFormReturn } from 'react-hook-form';
+import { useWatch, type UseFormReturn } from 'react-hook-form';
 import { FormSectionCollapsible } from '@/modules/shared/components/form-section';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -15,9 +15,10 @@ type Props = {
 };
 
 export function ProductSeoSection({ form, open, onToggle, errors, onChange }: Props) {
-    const name = form.watch('name');
-    const metaTitle = form.watch('metaTitle');
-    const slug = form.watch('slug');
+    const name = useWatch({ control: form.control, name: 'name' }) as string;
+    const metaTitle = useWatch({ control: form.control, name: 'metaTitle' }) as string | null;
+    const slug = useWatch({ control: form.control, name: 'slug' }) as string | null;
+    const metaDescription = useWatch({ control: form.control, name: 'metaDescription' }) as string | null;
 
     return (
         <FormSectionCollapsible
@@ -60,7 +61,7 @@ export function ProductSeoSection({ form, open, onToggle, errors, onChange }: Pr
                 <Label htmlFor="metaDescription">Meta Description</Label>
                 <Textarea
                     id="metaDescription"
-                    value={form.watch('metaDescription') ?? ''}
+                    value={metaDescription ?? ''}
                     onChange={(e) => onChange('metaDescription', e.target.value || null)}
                     placeholder="Brief description for search results"
                     rows={2}
@@ -69,7 +70,7 @@ export function ProductSeoSection({ form, open, onToggle, errors, onChange }: Pr
                 <div className="flex justify-between">
                     <FieldError error={errors.metaDescription} />
                     <span className="text-muted-foreground text-xs">
-                        {320 - (form.watch('metaDescription') ?? '').length} chars left
+                        {320 - (metaDescription ?? '').length} chars left
                     </span>
                 </div>
             </FieldGroup>

@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { useWatch } from 'react-hook-form';
 import { ProductGeneralSection } from './product-general-section';
 import { ProductPricingSection } from './product-pricing-section';
 import { ProductInventorySection } from './product-inventory-section';
@@ -40,6 +41,12 @@ export function ProductFormPage({
         method,
         onSuccess,
     });
+
+    const images = useWatch({ control: form.control, name: 'images' });
+    const variants = useWatch({ control: form.control, name: 'variants' });
+    const variantGroups = useWatch({ control: form.control, name: 'variantGroups' });
+    const attributes = useWatch({ control: form.control, name: 'attributes' });
+    const sku = useWatch({ control: form.control, name: 'sku' });
 
     const [shippingOpen, setShippingOpen] = useState(false);
     const [seoOpen, setSeoOpen] = useState(false);
@@ -89,23 +96,23 @@ export function ProductFormPage({
                 />
 
                 <ProductImageUpload
-                    images={form.watch('images') ?? []}
+                    images={images ?? []}
                     errors={errors}
                     onChange={onChange}
                 />
 
                 <VariantGrid
-                    variants={(form.watch('variants') ?? []) as VariantRowFormData[]}
-                    variantGroups={(form.watch('variantGroups') ?? []) as VariantGroup[]}
-                    parentSku={form.watch('sku')}
-                    productImages={form.watch('images')}
+                    variants={(variants ?? []) as VariantRowFormData[]}
+                    variantGroups={(variantGroups ?? []) as VariantGroup[]}
+                    parentSku={sku}
+                    productImages={images}
                     errors={errors}
                     onChange={onChange as (field: 'variants', value: VariantRowFormData[]) => void}
                     onGroupsChange={onChange as (field: 'variantGroups', value: VariantGroup[]) => void}
                 />
 
                 <AttributeManager
-                    attributes={(form.watch('attributes') ?? []) as AttributeFormData[]}
+                    attributes={(attributes ?? []) as AttributeFormData[]}
                     errors={errors}
                     onChange={onChange as (field: 'attributes', value: AttributeFormData[]) => void}
                 />

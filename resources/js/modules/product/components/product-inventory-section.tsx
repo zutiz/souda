@@ -1,4 +1,4 @@
-import type { UseFormReturn } from 'react-hook-form';
+import { useWatch, type UseFormReturn } from 'react-hook-form';
 import { FormSection } from '@/modules/shared/components/form-section';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
@@ -14,8 +14,12 @@ type Props = {
 };
 
 export function ProductInventorySection({ form, errors, onChange, onGenerateSku }: Props) {
-    const trackStock = form.watch('trackStock');
-    const sku = form.watch('sku');
+    const trackStock = useWatch({ control: form.control, name: 'trackStock' }) as boolean;
+    const sku = useWatch({ control: form.control, name: 'sku' }) as string;
+    const barcode = useWatch({ control: form.control, name: 'barcode' }) as string | null;
+    const quantity = useWatch({ control: form.control, name: 'quantity' }) as number;
+    const lowStockThreshold = useWatch({ control: form.control, name: 'lowStockThreshold' }) as number;
+    const allowBackorders = useWatch({ control: form.control, name: 'allowBackorders' }) as boolean;
 
     return (
         <FormSection title="Inventory" description="SKU, barcode, and stock tracking">
@@ -47,7 +51,7 @@ export function ProductInventorySection({ form, errors, onChange, onGenerateSku 
                     <Label htmlFor="barcode">Barcode</Label>
                     <Input
                         id="barcode"
-                        value={form.watch('barcode') ?? ''}
+                        value={barcode ?? ''}
                         onChange={(e) => onChange('barcode', e.target.value || null)}
                         placeholder="UPC, EAN, or ISBN"
                     />
@@ -72,7 +76,7 @@ export function ProductInventorySection({ form, errors, onChange, onGenerateSku 
                             id="quantity"
                             type="number"
                             min="0"
-                            value={form.watch('quantity')}
+                            value={quantity}
                             onChange={(e) => onChange('quantity', e.target.valueAsNumber || 0)}
                         />
                         <FieldError error={errors.quantity} />
@@ -84,7 +88,7 @@ export function ProductInventorySection({ form, errors, onChange, onGenerateSku 
                             id="lowStockThreshold"
                             type="number"
                             min="0"
-                            value={form.watch('lowStockThreshold')}
+                            value={lowStockThreshold}
                             onChange={(e) => onChange('lowStockThreshold', e.target.valueAsNumber || 0)}
                         />
                         <FieldError error={errors.lowStockThreshold} />
@@ -95,11 +99,11 @@ export function ProductInventorySection({ form, errors, onChange, onGenerateSku 
                         <div className="flex h-9 items-center">
                             <Switch
                                 id="allowBackorders"
-                                checked={form.watch('allowBackorders')}
+                                checked={allowBackorders}
                                 onCheckedChange={(checked) => onChange('allowBackorders', checked)}
                             />
                             <Label htmlFor="allowBackorders" className="ml-3 cursor-pointer text-sm">
-                                {form.watch('allowBackorders') ? 'Allowed' : 'Not allowed'}
+                                {allowBackorders ? 'Allowed' : 'Not allowed'}
                             </Label>
                         </div>
                     </FieldGroup>

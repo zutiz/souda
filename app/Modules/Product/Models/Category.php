@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace App\Modules\Product\Models;
 
+use App\Modules\Product\Database\Factories\CategoryFactory;
 use App\Modules\Product\Traits\HasMaterializedPath;
 use App\Modules\Product\Traits\Sluggable;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -13,8 +15,14 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Category extends Model
 {
+    use HasFactory;
     use HasMaterializedPath;
     use Sluggable;
+
+    protected static function newFactory(): CategoryFactory
+    {
+        return CategoryFactory::new();
+    }
 
     protected $fillable = [
         'parent_id',

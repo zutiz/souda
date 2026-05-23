@@ -22,4 +22,16 @@ class StoreCategoryRequest extends FormRequest
             'meta_description' => ['nullable', 'string', 'max:500'],
         ];
     }
+
+    public function withValidator($validator): void
+    {
+        $validator->after(function ($validator) {
+            $parentId = $this->input('parent_id');
+            $category = $this->route('category');
+
+            if ($category !== null && $parentId !== null && (int) $parentId === (int) $category->id) {
+                $validator->errors()->add('parent_id', 'A category cannot be its own parent.');
+            }
+        });
+    }
 }

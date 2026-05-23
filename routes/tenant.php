@@ -71,7 +71,7 @@ Route::middleware(['web', 'auth', InitializeTenancyByUser::class])->group(functi
         });
 
         Route::resource('products', ProductController::class)
-            ->only(['index', 'create', 'store', 'edit', 'update', 'destroy']);
+            ->only(['index', 'create', 'store', 'show', 'edit', 'update', 'destroy']);
 
         Route::get('/team', [TeamController::class, 'index'])->name('team.index');
         Route::post('/team/invite', [TeamController::class, 'invite'])->name('team.invite')->middleware('seat');

@@ -643,6 +643,7 @@ readonly class ProductDTO
         public ?array $dimensions,
         public ?array $categoryIds,
         public ?array $attributeValues,
+        public ?array $metadata,
         public ?array $media,
         public ?CarbonImmutable $publishedAt,
     ) {}
@@ -1311,12 +1312,15 @@ StoreVariantRequest
 StoreCategoryRequest
   name: required, string, max:255
   slug: nullable, string, max:255, alpha_dash, unique:categories,slug
-  parent_id: nullable, exists:categories,id, DifferentParent (no circular)
+  parent_id: nullable, exists:categories,id
   description: nullable, string
   is_active: boolean
   sort_order: integer, min:0
   meta_title: nullable, string, max:255
   meta_description: nullable, string, max:500
+
+  withValidator(): checks parent_id != current category's own id
+  CircularCategoryException thrown by CategoryService as safety net
 
 StoreBrandRequest
   name: required, string, max:255
@@ -1390,7 +1394,8 @@ ValidBarcode
   Message: "The :attribute is not a valid barcode."
 
 DifferentParent
-  Validates category parent_id != own id, no circular parent chain
+  Enforced via StoreCategoryRequest::withValidator() — checks parent_id != own id
+  CategoryService::validateParent() throws CircularCategoryException as safety net
   Message: "A category cannot be its own parent."
 
 StockAvailable
@@ -1404,24 +1409,28 @@ StockAvailable
 
 All routes are tenant-scoped (`routes/tenant.php`), behind `auth` + `InitializeTenancyByUser` middleware.
 
+`ProductController` uses the `AuthorizesRequests` trait and enforces authorization via `ProductPolicy` on `store()`, `update()`, and `destroy()`. Other controllers (`CategoryController`, `BrandController`, etc.) should follow the same pattern.
+
+**Critical note — Spatie Permission connection**: Custom `App\Models\Permission` and `App\Models\Role` models extend Spatie's stock models with the `CentralConnection` trait. This ensures all permission/role queries always target the central database, even after `tenancy()->initialize()` switches the default connection to the tenant database. See `config/permission.php` for model bindings.
+
 ### 8.1 Products
 
-| Method | Route | Name | Description |
-|--------|-------|------|-------------|
-| GET | `/products` | `products.index` | List products (paginated, filterable, sortable) |
-| GET | `/products/create` | `products.create` | Create product form page |
-| POST | `/products` | `products.store` | Create a product |
-| GET | `/products/{product}` | `products.show` | View product details |
-| GET | `/products/{product}/edit` | `products.edit` | Edit product form page |
-| PUT | `/products/{product}` | `products.update` | Update a product |
-| DELETE | `/products/{product}` | `products.destroy` | Delete a product |
-| POST | `/products/{product}/archive` | `products.archive` | Archive a product |
-| POST | `/products/{product}/restore` | `products.restore` | Restore archived product |
-| POST | `/products/{product}/publish` | `products.publish` | Publish a draft product |
-| POST | `/products/{product}/duplicate` | `products.duplicate` | Duplicate a product |
-| POST | `/products/import` | `products.import` | Import products from CSV |
-| GET | `/products/export` | `products.export` | Export products to CSV |
-| POST | `/products/bulk-action` | `products.bulk` | Bulk actions (delete, archive, update) |
+| Method | Route | Name | Description | Permission |
+|--------|-------|------|-------------|------------|
+| GET | `/products` | `products.index` | List products (paginated, filterable, sortable) | `products.view` (via policy) |
+| GET | `/products/create` | `products.create` | Create product form page | — |
+| POST | `/products` | `products.store` | Create a product | `products.create` (via `$this->authorize()`) |
+| GET | `/products/{product}` | `products.show` | View product details | `products.view` (via policy) |
+| GET | `/products/{product}/edit` | `products.edit` | Edit product form page | — |
+| PUT | `/products/{product}` | `products.update` | Update a product | `products.update` (via `$this->authorize()`) |
+| DELETE | `/products/{product}` | `products.destroy` | Delete a product | `products.delete` (via `$this->authorize()`) |
+| POST | `/products/{product}/archive` | `products.archive` | Archive a product | `products.archive` (via policy) |
+| POST | `/products/{product}/restore` | `products.restore` | Restore archived product | — |
+| POST | `/products/{product}/publish` | `products.publish` | Publish a draft product | `products.publish` (via policy) |
+| POST | `/products/{product}/duplicate` | `products.duplicate` | Duplicate a product | `products.duplicate` (via policy) |
+| POST | `/products/import` | `products.import` | Import products from CSV | `products.import` (via policy) |
+| GET | `/products/export` | `products.export` | Export products to CSV | `products.export` (via policy) |
+| POST | `/products/bulk-action` | `products.bulk` | Bulk actions (delete, archive, update) | — |
 
 ### 8.2 Categories
 
@@ -1693,7 +1702,7 @@ Product::search('shirt')
 
 ## 11. Suggested Policies/Permissions
 
-### 11.1 Permissions (seeded on tenant creation)
+### 11.1 Permissions
 
 ```
 products.view, products.create, products.update, products.delete, products.archive, products.publish, products.duplicate, products.import, products.export, products.bulk-actions
@@ -1717,6 +1726,25 @@ Sales → products.view, categories.view, brands.view, stock.view, stock.view-mo
 Warehouse Staff → stock.view, stock.receive, stock.deduct, stock.transfer, stock.view-movements, stock.view-low-stock, warehouses.view, products.view
 Viewer → products.view, categories.view, brands.view, stock.view
 ```
+
+### 11.2b RolePermissionSeeder (Actual Implementation)
+
+Permissions and roles live in the **central database**. The `database/seeders/RolePermissionSeeder.php` creates all product permissions and syncs them to the `admin` role:
+
+```php
+$permissions = [
+    'products.view', 'products.create', 'products.update', 'products.delete',
+    'products.archive', 'products.publish', 'products.duplicate',
+    'products.import', 'products.export',
+];
+
+$admin = Role::firstOrCreate(['name' => 'admin', 'guard_name' => 'web']);
+$admin->syncPermissions(collect($permissions)->map(fn (string $name) =>
+    Permission::firstOrCreate(['name' => $name, 'guard_name' => 'web'])
+));
+```
+
+The seeder is called from `DatabaseSeeder` and runs before `AdminRoleSeeder`. Only product permissions are currently seeded — all other permission groups (categories, brands, stock, etc.) need to be added when those modules are implemented.
 
 ### 11.3 ProductPolicy
 

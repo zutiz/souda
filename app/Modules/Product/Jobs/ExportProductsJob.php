@@ -17,8 +17,6 @@ class ExportProductsJob implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
-    public $queue = 'low';
-
     public $tries = 1;
 
     public $timeout = 300;
@@ -27,7 +25,9 @@ class ExportProductsJob implements ShouldQueue
         public ProductSearchCriteria $criteria,
         public string $format,
         public int $userId,
-    ) {}
+    ) {
+        $this->onQueue('low');
+    }
 
     public function handle(ProductImportService $importService): void
     {

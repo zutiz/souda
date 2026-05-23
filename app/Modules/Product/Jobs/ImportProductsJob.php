@@ -15,8 +15,6 @@ class ImportProductsJob implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
-    public $queue = 'high';
-
     public $tries = 1;
 
     public $timeout = 300;
@@ -25,7 +23,9 @@ class ImportProductsJob implements ShouldQueue
         public string $filePath,
         public int $userId,
         public array $options = [],
-    ) {}
+    ) {
+        $this->onQueue('high');
+    }
 
     public function handle(ProductImportService $importService): void
     {

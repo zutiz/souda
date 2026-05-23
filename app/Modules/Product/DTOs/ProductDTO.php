@@ -35,6 +35,7 @@ readonly class ProductDTO
         public ?array $dimensions,
         public ?array $categoryIds,
         public ?array $attributeValues,
+        public ?array $metadata,
         public ?CarbonImmutable $publishedAt,
     ) {}
 
@@ -61,8 +62,8 @@ readonly class ProductDTO
             basePrice: $product->base_price,
             compareAtPrice: $product->compare_at_price,
             costPrice: $product->cost_price,
-            taxInclusive: $product->tax_inclusive,
-            trackInventory: $product->track_inventory,
+            taxInclusive: $product->tax_inclusive ?? false,
+            trackInventory: $product->track_inventory ?? true,
             lowStockThreshold: $product->low_stock_threshold,
             dimensions: $product->weight !== null ? [
                 'weight' => $product->weight,
@@ -76,6 +77,7 @@ readonly class ProductDTO
             attributeValues: $product->relationLoaded('attributeValues')
                 ? $product->attributeValues->toArray()
                 : null,
+            metadata: $product->metadata,
             publishedAt: $product->published_at instanceof Carbon
                 ? CarbonImmutable::instance($product->published_at)
                 : null,
@@ -107,6 +109,7 @@ readonly class ProductDTO
             dimensions: $data['dimensions'] ?? null,
             categoryIds: $data['category_ids'] ?? null,
             attributeValues: $data['attribute_values'] ?? null,
+            metadata: $data['metadata'] ?? null,
             publishedAt: isset($data['published_at']) ? CarbonImmutable::parse($data['published_at']) : null,
         );
     }
