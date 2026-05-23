@@ -6,6 +6,7 @@ namespace App\Providers;
 
 use App\Http\Middleware\EnsureTenantHasFeature;
 use App\Http\Middleware\EnsureTenantHasSubscription;
+use App\Listeners\ProvisionTenantDatabase;
 use App\Modules\Billing\Events\PaymentFailed;
 use App\Modules\Billing\Events\PaymentReceived;
 use App\Modules\Billing\Events\SubscriptionActivated;
@@ -69,6 +70,13 @@ class BillingServiceProvider extends ServiceProvider
     private function registerEventListeners(): void
     {
         $events = $this->app->make('events');
+
+        // Provision tenant database (create + migrate) when subscription activates.
+        // This runs synchronously so the DB is ready before the user is redirected.
+        $events->listen(
+            SubscriptionActivated::class,
+            ProvisionTenantDatabase::class,
+        );
 
         $listener = $this->app->make(SendSubscriptionNotification::class);
 

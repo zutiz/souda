@@ -7,6 +7,9 @@ use App\Modules\Billing\Enums\BillingCycle;
 use App\Modules\Billing\Enums\SubscriptionStatus;
 use App\Modules\Billing\Models\Plan;
 use Illuminate\Database\Eloquent\Factories\Factory;
+use Stancl\Tenancy\Database\DatabaseManager;
+use Stancl\Tenancy\Jobs\CreateDatabase;
+use Stancl\Tenancy\Jobs\MigrateDatabase;
 
 /**
  * @extends Factory<Tenant>
@@ -44,7 +47,7 @@ class TenantFactory extends Factory
         return $this->afterCreating(function (Tenant $tenant) {
             $plan = Plan::factory()->createQuietly();
 
-            $tenant->subscriptions()->create([
+            $subscription = $tenant->subscriptions()->create([
                 'plan_id' => $plan->id,
                 'gateway' => 'manual',
                 'status' => SubscriptionStatus::Active,
@@ -55,6 +58,8 @@ class TenantFactory extends Factory
                 'expires_at' => now()->addMonth(),
                 'next_billing_at' => now()->addMonth(),
             ]);
+
+            $this->provisionTenantDatabase($tenant);
         });
     }
 
@@ -74,6 +79,27 @@ class TenantFactory extends Factory
                 'expires_at' => now()->subDay(),
                 'cancelled_at' => now()->subDay(),
             ]);
+
+            $this->provisionTenantDatabase($tenant);
         });
+    }
+
+    /**
+     * Create and migrate the tenant database.
+     *
+     * In the new architecture, tenant DBs are not created on TenantCreated.
+     * Factories that need a working tenant DB (e.g. subscribed) must call this.
+     */
+    protected function provisionTenantDatabase(Tenant $tenant): void
+    {
+        $manager = $tenant->database()->manager();
+
+        if (! $manager->databaseExists($tenant->database()->getName())) {
+            $createJob = app(CreateDatabase::class, ['tenant' => $tenant]);
+            $createJob->handle(app(DatabaseManager::class));
+        }
+
+        $migrateJob = app(MigrateDatabase::class, ['tenant' => $tenant]);
+        $migrateJob->handle();
     }
 }

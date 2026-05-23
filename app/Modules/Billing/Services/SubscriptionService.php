@@ -2,6 +2,7 @@
 
 namespace App\Modules\Billing\Services;
 
+use App\Models\Tenant;
 use App\Modules\Billing\DTOs\SubscriptionDTO;
 use App\Modules\Billing\Enums\BillingCycle;
 use App\Modules\Billing\Enums\PaymentStatus;
@@ -44,8 +45,8 @@ class SubscriptionService
             ? ($plan->yearly_price ?? $plan->monthly_price * 12)
             : $plan->monthly_price;
 
-        $tenant = tenant();
-        $trialAvailable = $plan->trial_enabled && ! $tenant->trial_used;
+        $tenant = Tenant::find($tenantId);
+        $trialAvailable = $plan->trial_enabled && $tenant && ! $tenant->trial_used;
 
         if ($trialAvailable && $plan->trial_without_card) {
             $status = SubscriptionStatus::Trial;
@@ -154,7 +155,7 @@ class SubscriptionService
         ]);
 
         if ($wasTrial || $subscription->trial_ends_at) {
-            tenant()->update(['trial_used' => true]);
+            $subscription->tenant->update(['trial_used' => true]);
         }
 
         SubscriptionActivated::dispatch($subscription, $wasTrial);

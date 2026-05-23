@@ -4,15 +4,12 @@ declare(strict_types=1);
 
 namespace App\Providers;
 
-use App\Listeners\SetupTenantDefaults;
 use Illuminate\Contracts\Http\Kernel;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\ServiceProvider;
-use Stancl\JobPipeline\JobPipeline;
 use Stancl\Tenancy\Contracts\TenantWithDatabase;
 use Stancl\Tenancy\Events;
-use Stancl\Tenancy\Jobs;
 use Stancl\Tenancy\Listeners;
 use Stancl\Tenancy\Middleware;
 
@@ -25,15 +22,9 @@ class TenancyServiceProvider extends ServiceProvider
         return [
             // Tenant events
             Events\CreatingTenant::class => [],
-            Events\TenantCreated::class => [
-                JobPipeline::make([
-                    Jobs\CreateDatabase::class,
-                    Jobs\MigrateDatabase::class,
-                ])->send(function (Events\TenantCreated $event) {
-                    return $event->tenant;
-                })->shouldBeQueued(false),
-                SetupTenantDefaults::class,
-            ],
+            // Tenant DB is NOT created here. It is provisioned on
+            // SubscriptionActivated via ProvisionTenantDatabase listener.
+            Events\TenantCreated::class => [],
 
             Events\SavingTenant::class => [],
             Events\TenantSaved::class => [],
@@ -111,10 +102,6 @@ class TenancyServiceProvider extends ServiceProvider
     {
         foreach ($this->events() as $event => $listeners) {
             foreach ($listeners as $listener) {
-                if ($listener instanceof JobPipeline) {
-                    $listener = $listener->toListener();
-                }
-
                 Event::listen($event, $listener);
             }
         }

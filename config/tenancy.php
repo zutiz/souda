@@ -209,6 +209,7 @@ return [
      */
     'migration_parameters' => [
         '--force' => true,
+        '--realpath' => true,
         '--path' => [
             database_path('migrations/tenant'),
             app_path('Modules/Product/Database/Migrations/Tenant'),

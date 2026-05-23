@@ -29,8 +29,12 @@ class BillingController extends Controller
 
     public function index(Request $request): Response
     {
-        /** @var Tenant $tenant */
-        $tenant = tenant();
+        /** @var Tenant|null $tenant */
+        $tenant = $request->user()->tenant;
+
+        if (! $tenant) {
+            abort(403, 'No tenant associated with your account.');
+        }
 
         $subscription = $this->subscriptionService->getTenantSubscription($tenant->id);
 
@@ -91,8 +95,12 @@ class BillingController extends Controller
             'billing_cycle' => ['nullable', 'string', 'in:daily,weekly,month,monthly,quarterly,year,yearly'],
         ]);
 
-        /** @var Tenant $tenant */
-        $tenant = tenant();
+        /** @var Tenant|null $tenant */
+        $tenant = $request->user()->tenant;
+
+        if (! $tenant) {
+            abort(403, 'No tenant associated with your account.');
+        }
 
         $plan = $this->planService->findOrFail($validated['plan_id']);
 
@@ -143,8 +151,12 @@ class BillingController extends Controller
 
     public function cancel(Request $request): JsonResponse
     {
-        /** @var Tenant $tenant */
-        $tenant = tenant();
+        /** @var Tenant|null $tenant */
+        $tenant = $request->user()->tenant;
+
+        if (! $tenant) {
+            abort(403, 'No tenant associated with your account.');
+        }
 
         $subscription = $this->subscriptionService->getTenantSubscription($tenant->id);
 
@@ -159,8 +171,14 @@ class BillingController extends Controller
 
     public function invoices(Request $request): Response
     {
-        /** @var Tenant $tenant */
-        $tenant = tenant()->load('owner');
+        /** @var Tenant|null $tenant */
+        $tenant = $request->user()->tenant;
+
+        if (! $tenant) {
+            abort(403, 'No tenant associated with your account.');
+        }
+
+        $tenant->load('owner');
 
         $payments = $this->paymentService->getTenantPayments($tenant->id);
 

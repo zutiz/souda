@@ -26,12 +26,6 @@ use Inertia\Inertia;
 */
 
 Route::middleware(['web', 'auth', InitializeTenancyByUser::class])->group(function () {
-    Route::get('/billing', [BillingController::class, 'index'])->name('billing');
-    Route::post('/billing/subscribe', [BillingController::class, 'subscribe'])->name('billing.subscribe');
-    Route::post('/billing/cancel', [BillingController::class, 'cancel'])->name('billing.cancel');
-    Route::get('/billing/invoices', [BillingController::class, 'invoices'])->name('billing.invoices');
-    Route::get('/billing/callback/{gateway}', [BillingController::class, 'callback'])->name('billing.callback');
-
     Route::middleware('subscription')->group(function () {
         Route::get('/dashboard', function () {
             return Inertia::render('dashboard');
