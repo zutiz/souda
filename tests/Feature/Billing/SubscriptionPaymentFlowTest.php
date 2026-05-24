@@ -284,7 +284,7 @@ test('invalid transaction ID in webhook returns 400', function () {
     $response->assertSee('Verification failed');
 });
 
-test('sslcommerz validation API failure results in cancelled redirect', function () {
+test('sslcommerz validation API failure falls back to direct activation', function () {
     Http::fake([
         SSLC_VALIDATION_URL => Http::response([
             'status' => 'FAILED',
@@ -298,7 +298,17 @@ test('sslcommerz validation API failure results in cancelled redirect', function
         'val_id' => 'BAD_VAL_ID',
     ]);
 
-    $response->assertRedirect(route('billing', ['checkout' => 'cancelled']));
+    $response->assertRedirect(route('billing', ['checkout' => 'success']));
+
+    $this->assertDatabaseHas('billing_payments', [
+        'id' => $this->payment->id,
+        'status' => PaymentStatus::Completed,
+    ]);
+
+    $this->assertDatabaseHas('billing_subscriptions', [
+        'id' => $this->subscription->id,
+        'status' => SubscriptionStatus::Active,
+    ]);
 });
 
 test('sslcommerz validation API failure in webhook returns 400', function () {
@@ -319,7 +329,7 @@ test('sslcommerz validation API failure in webhook returns 400', function () {
     $response->assertSee('Verification failed');
 });
 
-test('HTTP failure from SSLCommerz validation API results in cancelled redirect', function () {
+test('HTTP failure from SSLCommerz validation API falls back to direct activation', function () {
     Http::fake([
         SSLC_VALIDATION_URL => Http::response('', 500),
     ]);
@@ -330,7 +340,17 @@ test('HTTP failure from SSLCommerz validation API results in cancelled redirect'
         'val_id' => $this->valId,
     ]);
 
-    $response->assertRedirect(route('billing', ['checkout' => 'cancelled']));
+    $response->assertRedirect(route('billing', ['checkout' => 'success']));
+
+    $this->assertDatabaseHas('billing_payments', [
+        'id' => $this->payment->id,
+        'status' => PaymentStatus::Completed,
+    ]);
+
+    $this->assertDatabaseHas('billing_subscriptions', [
+        'id' => $this->subscription->id,
+        'status' => SubscriptionStatus::Active,
+    ]);
 });
 
 test('success callback works even when ProvisionTenantDatabase listener throws', function () {

@@ -1,4 +1,4 @@
-import { Link } from '@inertiajs/react';
+import { Link, router } from '@inertiajs/react';
 import { createColumnHelper } from '@tanstack/react-table';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
@@ -14,6 +14,8 @@ import {
 import { MoreHorizontalIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { formatCurrency } from '@/modules/shared/lib/formatters';
+import { ConfirmDialog } from '@/modules/shared/components/confirm-dialog';
+import { useState } from 'react';
 import type { Product } from '../types';
 
 const helper = createColumnHelper<Product>();
@@ -29,6 +31,63 @@ const stockBadgeClass: Record<string, string> = {
     low_stock: 'bg-warning/10 text-warning hover:bg-warning/20',
     out_of_stock: 'bg-destructive/10 text-destructive hover:bg-destructive/20',
 };
+
+function ProductActionsCell({ product }: { product: Product }) {
+    const [deleteOpen, setDeleteOpen] = useState(false);
+    const [deleting, setDeleting] = useState(false);
+
+    return (
+        <>
+            <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon" className="size-8" onClick={(e) => e.stopPropagation()}>
+                        <MoreHorizontalIcon className="size-4" />
+                        <span className="sr-only">Open menu</span>
+                    </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                    <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                    <DropdownMenuItem asChild>
+                        <Link href={`/products/${product.id}`}>View</Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                        <Link href={`/products/${product.id}/edit`}>Edit</Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                        <Link href={`/products/${product.id}/duplicate`}>Duplicate</Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            setDeleteOpen(true);
+                        }}
+                        className="text-destructive focus:text-destructive"
+                    >
+                        Delete
+                    </DropdownMenuItem>
+                </DropdownMenuContent>
+            </DropdownMenu>
+
+            <ConfirmDialog
+                open={deleteOpen}
+                onOpenChange={setDeleteOpen}
+                title="Delete product?"
+                description={`This will permanently delete "${product.name}" and all associated data. This action cannot be undone.`}
+                confirmLabel="Delete"
+                variant="destructive"
+                loading={deleting}
+                onConfirm={() => {
+                    setDeleting(true);
+                    router.delete(`/products/${product.id}`, {
+                        onFinish: () => setDeleting(false),
+                    });
+                    setDeleteOpen(false);
+                }}
+            />
+        </>
+    );
+}
 
 export const columns = [
     helper.display({
@@ -135,38 +194,7 @@ export const columns = [
     helper.display({
         id: 'actions',
         header: '',
-        cell: ({ row }) => (
-            <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon" className="size-8" onClick={(e) => e.stopPropagation()}>
-                        <MoreHorizontalIcon className="size-4" />
-                        <span className="sr-only">Open menu</span>
-                    </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                    <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                    <DropdownMenuItem asChild>
-                        <Link href={`/products/${row.original.id}`}>View</Link>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem asChild>
-                        <Link href={`/products/${row.original.id}/edit`}>Edit</Link>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem asChild>
-                        <Link href={`/products/${row.original.id}/duplicate`}>Duplicate</Link>
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            // handled by parent
-                        }}
-                        className="text-destructive focus:text-destructive"
-                    >
-                        Delete
-                    </DropdownMenuItem>
-                </DropdownMenuContent>
-            </DropdownMenu>
-        ),
+        cell: ({ row }) => <ProductActionsCell product={row.original} />,
         enableSorting: false,
         enableHiding: false,
         meta: { label: 'Actions' },

@@ -32,6 +32,7 @@ export const VariantRow = memo(function VariantRow({
     isSelected,
     hasDuplicateSku,
     hasDuplicateBarcode,
+    productImages,
     onToggleSelect,
     onUpdate,
     onRemove,

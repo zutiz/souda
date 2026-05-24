@@ -90,6 +90,8 @@ export default function ProductShow() {
         { title: product.name, href: '#' },
     ];
 
+    const warehouseStock = product.warehouseStock ?? [];
+    const variants = product.variants ?? [];
     const available = product.total_quantity - product.total_reserved;
 
     return (
@@ -151,9 +153,9 @@ export default function ProductShow() {
                             <InfoRow label="Low Stock Threshold" value={product.low_stock_threshold} />
                         </InfoSection>
 
-                        {product.warehouseStock.length > 0 && (
+                        {warehouseStock.length > 0 && (
                             <InfoSection title="Warehouse Stock">
-                                {product.warehouseStock.map((ws) => (
+                                {warehouseStock.map((ws) => (
                                     <InfoRow key={ws.warehouse.id} label={ws.warehouse.name} value={ws.quantity} />
                                 ))}
                             </InfoSection>
@@ -176,14 +178,14 @@ export default function ProductShow() {
                             </Card>
                         )}
 
-                        {product.variants.length > 0 && (
+                        {variants.length > 0 && (
                             <Card>
                                 <CardHeader>
                                     <CardTitle className="text-base">Variants ({product.variants.length})</CardTitle>
                                 </CardHeader>
                                 <CardContent>
                                     <div className="space-y-2">
-                                        {product.variants.map((v) => (
+                                        {variants.map((v) => (
                                             <div key={v.id} className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
                                                 <div className="flex items-center gap-2">
                                                     <span className="font-medium">{v.name}</span>

@@ -1729,7 +1729,7 @@ Viewer → products.view, categories.view, brands.view, stock.view
 
 ### 11.2b RolePermissionSeeder (Actual Implementation)
 
-Permissions and roles live in the **central database**. The `database/seeders/RolePermissionSeeder.php` creates all product permissions and syncs them to the `admin` role:
+Permissions and roles live in the **central database**. The `database/seeders/RolePermissionSeeder.php` creates all product permissions and syncs them to both the `admin` and `tenant` roles:
 
 ```php
 $permissions = [
@@ -1742,9 +1742,18 @@ $admin = Role::firstOrCreate(['name' => 'admin', 'guard_name' => 'web']);
 $admin->syncPermissions(collect($permissions)->map(fn (string $name) =>
     Permission::firstOrCreate(['name' => $name, 'guard_name' => 'web'])
 ));
+
+$tenantRole = Role::firstOrCreate(['name' => 'tenant', 'guard_name' => 'web']);
+$tenantRole->syncPermissions(collect($permissions)->map(fn (string $name) =>
+    Permission::firstOrCreate(['name' => $name, 'guard_name' => 'web'])
+));
 ```
 
 The seeder is called from `DatabaseSeeder` and runs before `AdminRoleSeeder`. Only product permissions are currently seeded — all other permission groups (categories, brands, stock, etc.) need to be added when those modules are implemented.
+
+**Role assignments:**
+- `admin` role → platform/SaaS administrators (`admin@admin.com`)
+- `tenant` role → tenant users (`test@example.com` via `TenantDatabaseSeeder`)
 
 ### 11.3 ProductPolicy
 

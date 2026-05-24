@@ -263,7 +263,7 @@ class BillingController extends Controller
 
             return redirect()->route('billing', ['checkout' => 'success']);
         } catch (\Throwable $e) {
-            Log::error('SSLCommerz success callback failed', [
+            Log::error('SSLCommerz success callback failed, falling back to direct activation', [
                 'tran_id' => $transactionId,
                 'error' => $e->getMessage(),
             ]);
@@ -272,6 +272,20 @@ class BillingController extends Controller
 
             if ($payment && $payment->status === PaymentStatus::Completed) {
                 return redirect()->route('billing', ['checkout' => 'success']);
+            }
+
+            if ($payment && $payment->subscription) {
+                try {
+                    $this->subscriptionService->activateSubscription($payment->subscription);
+                    $payment->markAsCompleted($transactionId);
+
+                    return redirect()->route('billing', ['checkout' => 'success']);
+                } catch (\Throwable $activationError) {
+                    Log::error('SSLCommerz fallback activation also failed', [
+                        'tran_id' => $transactionId,
+                        'error' => $activationError->getMessage(),
+                    ]);
+                }
             }
 
             return redirect()->route('billing', ['checkout' => 'cancelled']);
