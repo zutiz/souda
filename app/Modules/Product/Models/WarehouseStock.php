@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Product\Models;
 
 use App\Modules\Product\Traits\HasOptimisticLocking;
+use App\Tenancy\Models\Concerns\HasTenantScope;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -12,6 +13,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class WarehouseStock extends Model
 {
     use HasOptimisticLocking;
+    use HasTenantScope;
 
     protected $table = 'warehouse_stock';
 

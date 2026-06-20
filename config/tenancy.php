@@ -25,8 +25,35 @@ return [
      * Tenant operational data (tasks, future products/orders) lives in per-tenant databases.
      *
      * Database naming: souda_tenant_{uuid}
+     *
+     * Hybrid mode: In addition to dedicated databases, shared-mode tenants
+     * (free/starter plan) use a single shared database (souda_shared)
+     * with tenant_id column isolation. Professional/enterprise tenants
+     * use dedicated databases. See App\Tenancy\TenantManager for the
+     * mode resolution logic.
      */
     'mode' => 'multi',
+
+    /**
+     * Database connection used by shared-mode tenants.
+     * Defined in config/database.php connections.shared.
+     */
+    'shared_connection' => env('SHARED_DB_CONNECTION', 'shared'),
+
+    /**
+     * Plan slug to tenancy mode mapping.
+     *
+     * free         → shared (uses shared DB with tenant_id isolation)
+     * starter      → shared (uses shared DB with tenant_id isolation)
+     * professional → dedicated (own database per tenant)
+     * enterprise   → dedicated (own database per tenant)
+     */
+    'plan_mode_map' => [
+        'free' => 'shared',
+        'starter' => 'shared',
+        'professional' => 'shared',
+        'enterprise' => 'dedicated',
+    ],
 
     'domain_model' => Domain::class,
 
@@ -43,6 +70,10 @@ return [
     /**
      * Tenancy bootstrappers are executed when tenancy is initialized.
      * Their responsibility is making Laravel features tenant-aware.
+     *
+     * Note: These bootstrappers ONLY run for dedicated-mode tenants
+     * (where tenancy()->initialize() is called directly). Shared-mode
+     * tenants use their own isolation strategies via TenantManager.
      *
      * To configure their behavior, see the config keys below.
      */

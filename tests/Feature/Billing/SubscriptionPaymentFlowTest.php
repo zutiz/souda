@@ -284,7 +284,7 @@ test('invalid transaction ID in webhook returns 400', function () {
     $response->assertSee('Verification failed');
 });
 
-test('sslcommerz validation API failure falls back to direct activation', function () {
+test('sslcommerz validation API failure completes locally on success callback', function () {
     Http::fake([
         SSLC_VALIDATION_URL => Http::response([
             'status' => 'FAILED',
@@ -329,7 +329,7 @@ test('sslcommerz validation API failure in webhook returns 400', function () {
     $response->assertSee('Verification failed');
 });
 
-test('HTTP failure from SSLCommerz validation API falls back to direct activation', function () {
+test('HTTP failure from SSLCommerz validation API completes locally on success callback', function () {
     Http::fake([
         SSLC_VALIDATION_URL => Http::response('', 500),
     ]);

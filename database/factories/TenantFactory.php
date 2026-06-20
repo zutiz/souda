@@ -27,19 +27,20 @@ class TenantFactory extends Factory
 
         return [
             'name' => $accountName,
+            'tenancy_mode' => 'dedicated',
         ];
     }
 
-    /**
-     * Configure the factory to bootstrap the tenant database after creation.
-     *
-     * In multi-DB mode, each tenant gets their own database automatically.
-     * The TenantCreated event listener (CreateDatabase + MigrateDatabase jobs)
-     * handles the database creation and migration whenever a Tenant is created.
-     */
     public function configure(): static
     {
         return $this;
+    }
+
+    public function shared(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'tenancy_mode' => 'shared',
+        ]);
     }
 
     public function subscribed(): static
@@ -47,7 +48,7 @@ class TenantFactory extends Factory
         return $this->afterCreating(function (Tenant $tenant) {
             $plan = Plan::factory()->createQuietly();
 
-            $subscription = $tenant->subscriptions()->create([
+            $tenant->subscriptions()->create([
                 'plan_id' => $plan->id,
                 'gateway' => 'manual',
                 'status' => SubscriptionStatus::Active,
@@ -59,7 +60,9 @@ class TenantFactory extends Factory
                 'next_billing_at' => now()->addMonth(),
             ]);
 
-            $this->provisionTenantDatabase($tenant);
+            if ($tenant->isDedicated()) {
+                $this->provisionTenantDatabase($tenant);
+            }
         });
     }
 
@@ -80,16 +83,12 @@ class TenantFactory extends Factory
                 'cancelled_at' => now()->subDay(),
             ]);
 
-            $this->provisionTenantDatabase($tenant);
+            if ($tenant->isDedicated()) {
+                $this->provisionTenantDatabase($tenant);
+            }
         });
     }
 
-    /**
-     * Create and migrate the tenant database.
-     *
-     * In the new architecture, tenant DBs are not created on TenantCreated.
-     * Factories that need a working tenant DB (e.g. subscribed) must call this.
-     */
     protected function provisionTenantDatabase(Tenant $tenant): void
     {
         $manager = $tenant->database()->manager();

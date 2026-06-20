@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Middleware;
 
+use App\Tenancy\TenantManager;
 use Closure;
 use Illuminate\Http\Request;
 use Stancl\Tenancy\Exceptions\TenantDatabaseDoesNotExistException;
@@ -38,16 +39,20 @@ class InitializeTenancyByUser
             abort(403, 'Tenant not found. Your account may have been deactivated.');
         }
 
-        try {
-            tenancy()->initialize($tenant);
-        } catch (TenantDatabaseDoesNotExistException) {
-            // Tenant database doesn't exist yet — user hasn't subscribed.
-            // Only allow billing routes; redirect everything else.
-            if ($request->routeIs('billing') || $request->routeIs('billing.*')) {
-                return $next($request);
-            }
+        $manager = app(TenantManager::class);
 
-            return redirect()->route('billing');
+        if ($tenant->isDedicated()) {
+            try {
+                $manager->initialize($tenant);
+            } catch (TenantDatabaseDoesNotExistException) {
+                if ($request->routeIs('billing') || $request->routeIs('billing.*')) {
+                    return $next($request);
+                }
+
+                return redirect()->route('billing');
+            }
+        } else {
+            $manager->initialize($tenant);
         }
 
         return $next($request);
@@ -55,8 +60,10 @@ class InitializeTenancyByUser
 
     public function terminate(Request $request, Response $response): void
     {
-        if (tenancy()->initialized) {
-            tenancy()->end();
+        $manager = app(TenantManager::class);
+
+        if ($manager->initialized()) {
+            $manager->end();
         }
     }
 }

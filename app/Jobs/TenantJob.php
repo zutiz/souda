@@ -3,6 +3,7 @@
 namespace App\Jobs;
 
 use App\Models\Tenant;
+use App\Tenancy\TenantManager;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -18,19 +19,21 @@ abstract class TenantJob implements ShouldQueue
 
     public function __construct()
     {
-        $this->tenantId = tenancy()->initialized
-            ? tenancy()->tenant->id
-            : '';
+        $manager = app(TenantManager::class);
+
+        $this->tenantId = $manager->initialized()
+            ? $manager->id()
+            : (tenancy()->initialized ? tenancy()->tenant->id : '');
     }
 
     /**
-     * Initialize tenancy before execution.
-     * QueueTenancyBootstrapper handles this automatically in most cases,
-     * but this provides an explicit fallback.
+     * Initialize tenant context before execution.
      */
     public function handle(): void
     {
-        if (! tenancy()->initialized && $this->tenantId) {
+        $manager = app(TenantManager::class);
+
+        if (! $manager->initialized() && $this->tenantId) {
             $tenant = Tenant::find($this->tenantId);
 
             if (! $tenant) {
@@ -44,26 +47,20 @@ abstract class TenantJob implements ShouldQueue
                 return;
             }
 
-            tenancy()->initialize($tenant);
+            $manager->initialize($tenant);
         }
 
         try {
             $this->execute();
         } finally {
-            if (tenancy()->initialized) {
-                tenancy()->end();
+            if ($manager->initialized()) {
+                $manager->end();
             }
         }
     }
 
-    /**
-     * Implement job logic here. Tenant context is already initialized.
-     */
     abstract protected function execute(): void;
 
-    /**
-     * Override to add tenant-aware context to failed jobs.
-     */
     public function failed(\Throwable $exception): void
     {
         Log::error('Tenant job failed', [

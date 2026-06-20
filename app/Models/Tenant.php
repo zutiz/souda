@@ -23,6 +23,8 @@ use Stancl\Tenancy\Database\TenantCollection;
  * @property Carbon $created_at
  * @property Carbon $updated_at
  * @property Carbon|null $deleted_at
+ * @property string $tenancy_mode
+ * @property string|null $database_name
  * @property array<string, mixed> $data
  */
 class Tenant extends BaseTenant implements TenantWithDatabase
@@ -38,6 +40,8 @@ class Tenant extends BaseTenant implements TenantWithDatabase
             'owner_id',
             'trial_ends_at',
             'trial_used',
+            'tenancy_mode',
+            'database_name',
             'created_at',
             'updated_at',
             'deleted_at',
@@ -52,15 +56,19 @@ class Tenant extends BaseTenant implements TenantWithDatabase
         ];
     }
 
-    /**
-     * The database name for this tenant.
-     *
-     * In multi-DB mode, each tenant gets their own database named souda_tenant_{uuid}.
-     * The package uses this method to determine the database name when initializing tenancy.
-     */
     public function getDatabaseName(): string
     {
-        return 'souda_tenant_'.$this->id;
+        return $this->database_name ?? 'souda_tenant_'.$this->id;
+    }
+
+    public function isShared(): bool
+    {
+        return $this->tenancy_mode === 'shared';
+    }
+
+    public function isDedicated(): bool
+    {
+        return $this->tenancy_mode === 'dedicated';
     }
 
     public function user(): HasOne

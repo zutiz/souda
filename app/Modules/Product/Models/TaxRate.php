@@ -4,11 +4,14 @@ declare(strict_types=1);
 
 namespace App\Modules\Product\Models;
 
+use App\Tenancy\Models\Concerns\HasTenantScope;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class TaxRate extends Model
 {
+    use HasTenantScope;
+
     protected $table = 'tax_rates';
 
     protected $fillable = [

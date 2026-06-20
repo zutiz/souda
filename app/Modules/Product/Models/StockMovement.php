@@ -5,12 +5,14 @@ declare(strict_types=1);
 namespace App\Modules\Product\Models;
 
 use App\Modules\Product\Enums\MovementTypeEnum;
+use App\Tenancy\Models\Concerns\HasTenantScope;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class StockMovement extends Model
 {
+    use HasTenantScope;
     use HasUlids;
 
     protected $fillable = [

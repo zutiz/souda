@@ -5,12 +5,15 @@ declare(strict_types=1);
 namespace App\Modules\Product\Models;
 
 use App\Modules\Product\Enums\StockReservationStatusEnum;
+use App\Tenancy\Models\Concerns\HasTenantScope;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class StockReservation extends Model
 {
+    use HasTenantScope;
+
     protected $fillable = [
         'warehouse_id',
         'product_id',

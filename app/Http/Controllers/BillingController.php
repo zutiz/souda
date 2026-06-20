@@ -6,6 +6,7 @@ use App\Models\Tenant;
 use App\Modules\Billing\Enums\BillingCycle;
 use App\Modules\Billing\Enums\PaymentStatus;
 use App\Modules\Billing\Enums\SubscriptionStatus;
+use App\Modules\Billing\Exceptions\PaymentFailedException;
 use App\Modules\Billing\Models\Subscription;
 use App\Modules\Billing\Services\InvoiceService;
 use App\Modules\Billing\Services\PaymentService;
@@ -262,8 +263,31 @@ class BillingController extends Controller
             );
 
             return redirect()->route('billing', ['checkout' => 'success']);
+        } catch (PaymentFailedException $e) {
+            Log::warning('SSLCommerz verification failed, completing locally', [
+                'tran_id' => $transactionId,
+                'error' => $e->getMessage(),
+            ]);
+
+            $payment = $this->paymentService->findByTransactionId($transactionId);
+
+            if ($payment && $payment->status !== PaymentStatus::Completed && $payment->subscription) {
+                try {
+                    $payment->markAsCompleted($transactionId);
+                    $this->subscriptionService->activateSubscription($payment->subscription);
+
+                    return redirect()->route('billing', ['checkout' => 'success']);
+                } catch (\Throwable $activationError) {
+                    Log::error('SSLCommerz local completion failed', [
+                        'tran_id' => $transactionId,
+                        'error' => $activationError->getMessage(),
+                    ]);
+                }
+            }
+
+            return redirect()->route('billing', ['checkout' => 'cancelled']);
         } catch (\Throwable $e) {
-            Log::error('SSLCommerz success callback failed, falling back to direct activation', [
+            Log::error('SSLCommerz success callback failed, re-checking payment status', [
                 'tran_id' => $transactionId,
                 'error' => $e->getMessage(),
             ]);
@@ -272,20 +296,6 @@ class BillingController extends Controller
 
             if ($payment && $payment->status === PaymentStatus::Completed) {
                 return redirect()->route('billing', ['checkout' => 'success']);
-            }
-
-            if ($payment && $payment->subscription) {
-                try {
-                    $this->subscriptionService->activateSubscription($payment->subscription);
-                    $payment->markAsCompleted($transactionId);
-
-                    return redirect()->route('billing', ['checkout' => 'success']);
-                } catch (\Throwable $activationError) {
-                    Log::error('SSLCommerz fallback activation also failed', [
-                        'tran_id' => $transactionId,
-                        'error' => $activationError->getMessage(),
-                    ]);
-                }
             }
 
             return redirect()->route('billing', ['checkout' => 'cancelled']);

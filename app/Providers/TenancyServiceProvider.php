@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace App\Providers;
 
+use App\Tenancy\Modes\DedicatedMode;
+use App\Tenancy\Modes\SharedMode;
+use App\Tenancy\TenantManager;
 use Illuminate\Contracts\Http\Kernel;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Route;
@@ -17,13 +20,17 @@ class TenancyServiceProvider extends ServiceProvider
 {
     public static string $controllerNamespace = '';
 
+    public function register(): void
+    {
+        $this->app->singleton(TenantManager::class);
+        $this->app->singleton(SharedMode::class);
+        $this->app->singleton(DedicatedMode::class);
+    }
+
     public function events(): array
     {
         return [
-            // Tenant events
             Events\CreatingTenant::class => [],
-            // Tenant DB is NOT created here. It is provisioned on
-            // SubscriptionActivated via ProvisionTenantDatabase listener.
             Events\TenantCreated::class => [],
 
             Events\SavingTenant::class => [],
@@ -35,7 +42,7 @@ class TenancyServiceProvider extends ServiceProvider
                 function (Events\TenantDeleted $event): void {
                     $tenant = $event->tenant;
 
-                    if ($tenant instanceof TenantWithDatabase) {
+                    if ($tenant instanceof TenantWithDatabase && $tenant->isDedicated()) {
                         $manager = $tenant->database()->manager();
 
                         if ($manager->databaseExists($tenant->database()->getName())) {
@@ -45,7 +52,6 @@ class TenancyServiceProvider extends ServiceProvider
                 },
             ],
 
-            // Domain events
             Events\CreatingDomain::class => [],
             Events\DomainCreated::class => [],
             Events\SavingDomain::class => [],
@@ -55,14 +61,12 @@ class TenancyServiceProvider extends ServiceProvider
             Events\DeletingDomain::class => [],
             Events\DomainDeleted::class => [],
 
-            // Database events
             Events\DatabaseCreated::class => [],
             Events\DatabaseMigrated::class => [],
             Events\DatabaseSeeded::class => [],
             Events\DatabaseRolledBack::class => [],
             Events\DatabaseDeleted::class => [],
 
-            // Tenancy events
             Events\InitializingTenancy::class => [],
             Events\TenancyInitialized::class => [
                 Listeners\BootstrapTenancy::class,
@@ -78,17 +82,11 @@ class TenancyServiceProvider extends ServiceProvider
             Events\RevertingToCentralContext::class => [],
             Events\RevertedToCentralContext::class => [],
 
-            // Resource syncing
             Events\SyncedResourceSaved::class => [
                 Listeners\UpdateSyncedResource::class,
             ],
             Events\SyncedResourceChangedInForeignDatabase::class => [],
         ];
-    }
-
-    public function register(): void
-    {
-        //
     }
 
     public function boot(): void

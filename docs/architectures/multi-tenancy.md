@@ -2,13 +2,13 @@
 
 ## Overview
 
-This application uses `stancl/tenancy` v3 in **multi-database mode** with user-based tenant identification. Each tenant receives an isolated MySQL database, while shared platform data lives in a central database.
+This application uses `stancl/tenancy` v3 in **hybrid mode**: free/starter plan tenants share a single `souda_shared` database with `tenant_id` column isolation, while professional/enterprise tenants receive their own isolated MySQL database. Central/shared platform data lives in the `souda` (central) database. Tenant identification is user-based (derived from the authenticated user's `tenant_id`).
 
 ---
 
 ## 1. Database Architecture
 
-### Mode: Multi-Database
+### Mode: Hybrid (Shared + Dedicated)
 
 ```
 ┌──────────────────────────────────────────────────────────────┐
@@ -20,7 +20,7 @@ This application uses `stancl/tenancy` v3 in **multi-database mode** with user-b
 │  │  roles, permissions, model_has_roles                 │    │
 │  └──────────────────────────────────────────────────────┘    │
 │  ┌──────────────────────────────────────────────────────┐    │
-│  │  Tenancy Registry                                    │    │
+│  │  Tenancy Registry (with tenancy_mode column)          │    │
 │  │  tenants, domains                                    │    │
 │  └──────────────────────────────────────────────────────┘    │
 │  ┌──────────────────────────────────────────────────────┐    │
@@ -41,8 +41,19 @@ This application uses `stancl/tenancy` v3 in **multi-database mode** with user-b
 │  └──────────────────────────────────────────────────────┘    │
 └──────────────────────────────────────────────────────────────┘
 
+┌────────────────────────────────────────────────────┐
+│         Shared Database (souda_shared)              │
+│                                                    │
+│  tasks (tenant_id index)                           │
+│  tenant_settings (tenant_id index)                 │
+│  products, categories, brands (future)             │
+│  orders, inventory, crm (future)                   │
+│  All tables have tenant_id column + global scope   │
+└────────────────────────────────────────────────────┘
+
 ┌────────────────────────────┐  ┌────────────────────────────┐
 │  Tenant DB: souda_tenant_1  │  │  Tenant DB: souda_tenant_2  │
+│  (premium only)             │  │  (premium only)             │
 │                            │  │                            │
 │  tasks                     │  │  tasks                     │
 │  products (future)         │  │  products (future)         │
@@ -73,7 +84,9 @@ This application uses `stancl/tenancy` v3 in **multi-database mode** with user-b
 ### Tenancy Configuration (`config/tenancy.php`)
 
 ```php
-'mode' => 'multi',
+'mode' => 'multi', // stancl mode (dedicated tenants only)
+
+'shared_connection' => env('SHARED_DB_CONNECTION', 'shared'),
 
 'database' => [
     'central_connection' => env('CENTRAL_DB_CONNECTION', 'central'),
@@ -81,19 +94,27 @@ This application uses `stancl/tenancy` v3 in **multi-database mode** with user-b
     'prefix' => env('TENANT_DB_PREFIX', 'souda_tenant_'),
     'suffix' => '',
 ],
+
+'plan_mode_map' => [
+    'free'         => 'shared',
+    'starter'      => 'shared',
+    'professional' => 'dedicated',
+    'enterprise'   => 'dedicated',
+],
 ```
 
 ### Central vs Tenant Data
 
 | Category | Location | Tables | Rationale |
 |----------|----------|--------|-----------|
-| Authentication | Central | `users`, `sessions` | Users authenticate to the platform |
-| Authorization | Central | `roles`, `permissions`, `model_has_roles` | Role definitions are platform-level |
-| Tenancy | Central | `tenants`, `domains` | Tenant registry |
-| Billing | Central | `billing_plans`, `billing_subscriptions`, `billing_payments`, `billing_seat_allocations` | Plans are platform-defined, subscriptions track tenant billing |
-| Platform Config | Central | `app_settings`, `social_accounts` | Platform-wide settings |
-| Infrastructure | Central | `jobs`, `job_batches`, `failed_jobs` | Queue storage (central) |
-| Tenant Data | Tenant DB | `tasks` (and future: products, orders, inventory, CRM) | Business data isolated per tenant |
+| **Authentication** | Central | `users`, `sessions` | Users authenticate to the platform |
+| **Authorization** | Central | `roles`, `permissions`, `model_has_roles` | Role definitions are platform-level |
+| **Tenancy** | Central | `tenants`, `domains` | Tenant registry (includes `tenancy_mode`) |
+| **Billing** | Central | `billing_plans`, `billing_subscriptions`, `billing_payments`, `billing_seat_allocations` | Plans are platform-defined, subscriptions track tenant billing |
+| **Platform Config** | Central | `app_settings`, `social_accounts` | Platform-wide settings |
+| **Infrastructure** | Central | `jobs`, `job_batches`, `failed_jobs` | Queue storage (central) |
+| **Tenant Data (Shared)** | Shared DB | `tasks`, `tenant_settings` (with `tenant_id`) | free/starter tenants |
+| **Tenant Data (Dedicated)** | Tenant DB | `tasks`, `tenant_settings`, products, orders, etc. | professional/enterprise tenants |
 
 ### Tenant Model
 
@@ -105,36 +126,34 @@ class Tenant extends BaseTenant implements TenantWithDatabase
 
     public static function getCustomColumns(): array
     {
-        return ['id', 'name', 'owner_id', 'trial_ends_at', 'trial_used', 'created_at', 'updated_at', 'deleted_at'];
+        return [
+            'id', 'name', 'owner_id',
+            'trial_ends_at', 'trial_used',
+            'tenancy_mode', 'database_name', // hybrid mode columns
+            'created_at', 'updated_at', 'deleted_at',
+        ];
     }
 
     public function getDatabaseName(): string
     {
-        return 'souda_tenant_' . $this->id;
+        // Overridable via database_name column; falls back to prefix convention
+        return $this->database_name ?? 'souda_tenant_'.$this->id;
     }
 
-    public function user(): HasOne
+    public function isShared(): bool
     {
-        return $this->hasOne(User::class);
+        return $this->tenancy_mode === 'shared';
     }
 
-    public function owner(): BelongsTo
+    public function isDedicated(): bool
     {
-        return $this->belongsTo(User::class, 'owner_id');
+        return $this->tenancy_mode === 'dedicated';
     }
 
-    public function subscriptions(): HasMany
-    {
-        return $this->hasMany(Subscription::class, 'tenant_id', 'id');
-    }
-
-    public function activeSubscription(): ?Subscription
-    {
-        return $this->subscriptions()
-            ->accessible()
-            ->latest('id')
-            ->first();
-    }
+    public function user(): HasOne { ... }
+    public function owner(): BelongsTo { ... }
+    public function subscriptions(): HasMany { ... }
+    public function activeSubscription(): ?Subscription { ... }
 }
 ```
 

@@ -4,12 +4,15 @@ declare(strict_types=1);
 
 namespace App\Modules\Product\Models;
 
+use App\Tenancy\Models\Concerns\HasTenantScope;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class ProductAttributeValue extends Model
 {
+    use HasTenantScope;
+
     protected $table = 'product_attribute_values';
 
     protected $fillable = [

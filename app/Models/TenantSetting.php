@@ -2,10 +2,14 @@
 
 namespace App\Models;
 
+use App\Tenancy\Models\Concerns\HasTenantScope;
+use App\Tenancy\TenantManager;
 use Illuminate\Database\Eloquent\Model;
 
 class TenantSetting extends Model
 {
+    use HasTenantScope;
+
     protected $guarded = [];
 
     protected function casts(): array
@@ -15,6 +19,17 @@ class TenantSetting extends Model
             'feature_toggles' => 'array',
             'extra' => 'array',
         ];
+    }
+
+    public function getConnectionName(): ?string
+    {
+        $manager = app(TenantManager::class);
+
+        if ($manager->initialized() && $manager->isShared()) {
+            return 'shared';
+        }
+
+        return null;
     }
 
     public static function getDefaults(): array

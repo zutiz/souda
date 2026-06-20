@@ -10,6 +10,7 @@ use App\Modules\Product\Enums\ProductTypeEnum;
 use App\Modules\Product\Traits\HasProductMedia;
 use App\Modules\Product\Traits\HasProductStock;
 use App\Modules\Product\Traits\Sluggable;
+use App\Tenancy\Models\Concerns\HasTenantScope;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -23,6 +24,7 @@ class Product extends Model
     use HasFactory;
     use HasProductMedia;
     use HasProductStock;
+    use HasTenantScope;
     use HasUlids;
     use Searchable;
     use Sluggable;

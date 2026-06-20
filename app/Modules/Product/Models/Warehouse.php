@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Product\Models;
 
 use App\Modules\Product\Database\Factories\WarehouseFactory;
+use App\Tenancy\Models\Concerns\HasTenantScope;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -12,6 +13,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class Warehouse extends Model
 {
     use HasFactory;
+    use HasTenantScope;
 
     protected static function newFactory(): WarehouseFactory
     {

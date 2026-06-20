@@ -7,6 +7,7 @@ namespace App\Modules\Product\Models;
 use App\Modules\Product\Database\Factories\CategoryFactory;
 use App\Modules\Product\Traits\HasMaterializedPath;
 use App\Modules\Product\Traits\Sluggable;
+use App\Tenancy\Models\Concerns\HasTenantScope;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -17,6 +18,7 @@ class Category extends Model
 {
     use HasFactory;
     use HasMaterializedPath;
+    use HasTenantScope;
     use Sluggable;
 
     protected static function newFactory(): CategoryFactory

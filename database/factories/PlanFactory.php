@@ -73,6 +73,58 @@ class PlanFactory extends Factory
             'features' => ['basic_feature'],
             'limits' => ['users' => 1],
             'popular' => false,
+            'pricing_model' => 'flat',
+            'default_seats' => 0,
+            'seat_price' => 0,
+            'max_seats' => null,
+        ]);
+    }
+
+    public function starter(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'name' => 'Starter',
+            'slug' => 'starter',
+            'monthly_price' => 999,
+            'features' => ['basic_feature', 'email_support'],
+            'limits' => ['users' => 1],
+            'popular' => false,
+            'pricing_model' => 'per_seat',
+            'default_seats' => 1,
+            'seat_price' => 500,
+            'max_seats' => 10,
+        ]);
+    }
+
+    public function professional(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'name' => 'Professional',
+            'slug' => 'professional',
+            'monthly_price' => 2999,
+            'features' => ['basic_feature', 'email_support', 'analytics'],
+            'limits' => ['users' => 3],
+            'popular' => true,
+            'pricing_model' => 'per_seat',
+            'default_seats' => 3,
+            'seat_price' => 500,
+            'max_seats' => 25,
+        ]);
+    }
+
+    public function enterprise(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'name' => 'Enterprise',
+            'slug' => 'enterprise',
+            'monthly_price' => 9999,
+            'features' => ['basic_feature', 'email_support', 'analytics', 'api_access', 'priority_support'],
+            'limits' => ['users' => 5],
+            'popular' => false,
+            'pricing_model' => 'per_seat',
+            'default_seats' => 5,
+            'seat_price' => 350,
+            'max_seats' => null,
         ]);
     }
 

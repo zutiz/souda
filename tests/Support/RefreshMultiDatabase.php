@@ -3,23 +3,17 @@
 namespace Tests\Support;
 
 use App\Models\Task;
+use App\Tenancy\TenantManager;
 use Illuminate\Contracts\Console\Kernel;
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
 
 trait RefreshMultiDatabase
 {
     protected static bool $migratedCentral = false;
 
-    protected array $createdTenantDatabases = [];
+    protected static bool $migratedShared = false;
 
-    /**
-     * Hook into setUpTraits() to ensure refreshDatabase() is called.
-     *
-     * The standard RefreshDatabase trait hooks in via setUpTraits() checking
-     * for RefreshDatabase::class in the class uses. Since we use a custom
-     * trait name, we need to override setUpTraits() to trigger our own
-     * refreshDatabase() and then delegate to the parent.
-     */
     protected function setUpTraits(): array
     {
         $this->refreshDatabase();
@@ -27,15 +21,6 @@ trait RefreshMultiDatabase
         return parent::setUpTraits();
     }
 
-    /**
-     * Refresh the central database and clean up tenant databases.
-     *
-     * In multi-DB mode, the standard RefreshDatabase trait doesn't work because:
-     * 1. Tenant database creation (DDL) auto-commits MySQL transactions
-     * 2. Tenant data lives in separate databases not covered by central transactions
-     *
-     * This trait handles both central DB migration and tenant DB lifecycle.
-     */
     protected function refreshDatabase(): void
     {
         if (tenancy()->initialized) {
@@ -54,7 +39,42 @@ trait RefreshMultiDatabase
             static::$migratedCentral = true;
         }
 
+        $this->cleanCentralData();
+        $this->setupSharedDatabase();
         $this->dropTenantDatabases();
+    }
+
+    protected function cleanCentralData(): void
+    {
+        DB::connection('central')->table('billing_subscriptions')->delete();
+        DB::connection('central')->table('billing_plans')->delete();
+        DB::connection('central')->table('users')->delete();
+        DB::connection('central')->table('tenants')->delete();
+        DB::connection('central')->table('model_has_roles')->delete();
+        DB::connection('central')->table('roles')->delete();
+        DB::connection('central')->table('app_settings')->delete();
+    }
+
+    protected function setupSharedDatabase(): void
+    {
+        try {
+            DB::statement('CREATE DATABASE IF NOT EXISTS `souda_shared` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci');
+        } catch (\Throwable $e) {
+            return;
+        }
+
+        if (! static::$migratedShared) {
+            Artisan::call('migrate:fresh', [
+                '--force' => true,
+                '--database' => 'shared',
+                '--path' => 'database/migrations/shared',
+            ]);
+
+            static::$migratedShared = true;
+        }
+
+        DB::connection('shared')->table('tenant_settings')->truncate();
+        DB::connection('shared')->table('tasks')->truncate();
     }
 
     protected function dropTenantDatabases(): void
@@ -68,45 +88,36 @@ trait RefreshMultiDatabase
         }
     }
 
-    /**
-     * Initialize tenancy for a tenant within a test.
-     *
-     * Use this to run assertions or create data in a tenant's database:
-     *
-     * $this->withinTenant($tenant, function () use ($task) {
-     *     $this->assertDatabaseHas('tasks', ['id' => $task->id]);
-     * });
-     */
     protected function withinTenant($tenant, callable $callback): void
     {
-        tenancy()->initialize($tenant);
+        $manager = app(TenantManager::class);
+        $manager->initialize($tenant);
         $callback();
-        tenancy()->end();
+        $manager->end();
     }
 
-    /**
-     * Assert a record exists in the tenant's database.
-     */
     protected function assertTenantDatabaseHas($tenant, string $table, array $data): void
     {
-        $this->withinTenant($tenant, function () use ($table, $data) {
-            $this->assertDatabaseHas($table, $data);
-        });
+        $manager = app(TenantManager::class);
+        $manager->initialize($tenant);
+
+        $connection = $manager->isShared() ? 'shared' : null;
+        $this->assertDatabaseHas($table, $data, $connection);
+
+        $manager->end();
     }
 
-    /**
-     * Assert a record is missing from the tenant's database.
-     */
     protected function assertTenantDatabaseMissing($tenant, string $table, array $data): void
     {
-        $this->withinTenant($tenant, function () use ($table, $data) {
-            $this->assertDatabaseMissing($table, $data);
-        });
+        $manager = app(TenantManager::class);
+        $manager->initialize($tenant);
+
+        $connection = $manager->isShared() ? 'shared' : null;
+        $this->assertDatabaseMissing($table, $data, $connection);
+
+        $manager->end();
     }
 
-    /**
-     * Create a task within a tenant's context and return it.
-     */
     protected function createTaskForTenant($tenant, array $attributes = [])
     {
         $task = null;
