@@ -9,7 +9,7 @@ This application has **two billing systems** operating in parallel:
 
 The **Custom Billing Module** is the actively used system for the frontend billing flow.
 
-> **Multi-Tenant Architecture:** This application uses `stancl/tenancy` v3 in **multi-database mode**. Each tenant gets its own isolated database. All billing data (plans, subscriptions, payments) stays in the **central database** using the `CentralConnection` trait on billing models.
+> **Multi-Tenant Architecture:** This application uses `stancl/tenancy` v3 in **hybrid mode**: shared database (`souda_shared`) for free/starter plans with `tenant_id` column isolation, and dedicated databases (`souda_tenant_{uuid}`) for professional/enterprise plans. All billing data (plans, subscriptions, payments) stays in the **central database** using the `CentralConnection` trait on billing models.
 
 ---
 

@@ -86,14 +86,21 @@ class SubscriptionService
             'gateway' => $gateway,
         ]);
 
-        // If no immediate payment needed (trial without card), activate immediately.
-        if ($status === SubscriptionStatus::Trial) {
-            $this->activateSubscription($subscription, wasTrial: true);
+        // If amount is zero (free plan), activate immediately without payment.
+        if ($amount === 0) {
+            $this->activateSubscription($subscription);
 
             return [
                 'subscription' => $subscription,
                 'checkoutUrl' => null,
             ];
+        }
+
+        // Trial with payment: if the user selected a gateway and there's an amount due,
+        // process the payment through the gateway. The trial info (trial_ends_at) is
+        // preserved on the subscription for downstream handling.
+        if ($status === SubscriptionStatus::Trial) {
+            $subscription->update(['status' => SubscriptionStatus::PendingPayment]);
         }
 
         // Initiate payment via gateway.

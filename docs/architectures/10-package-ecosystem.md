@@ -8,13 +8,12 @@ Recommended Laravel packages for building a production-grade multi-tenant SaaS E
 
 | Package | Version | Purpose | Status |
 |---------|---------|---------|--------|
-| `laravel/framework` | ^13.0 | Core framework | Installed |
+| `laravel/framework` | ^12.0 | Core framework | Installed |
 | `inertiajs/inertia-laravel` | ^2.0 | Server-side Inertia | Installed |
 | `laravel/fortify` | ^1.30 | Authentication scaffolding | Installed |
 | `laravel/cashier` | ^16.3 | Stripe billing | Installed |
 | `laravel/socialite` | ^5.24 | OAuth authentication | Installed |
 | `laravel/wayfinder` | ^0.1.9 | TypeScript route generation | Installed |
-| `spatie/laravel-permission` | ^7.2 | Roles & permissions | Installed |
 | `stancl/tenancy` | ^3.9 | Multi-tenancy | Installed |
 
 ## Recommended Additions
@@ -138,29 +137,26 @@ composer require spatie/laravel-health
 | `date-fns` | ^4.1.0 | Date utilities | Installed |
 | `react-day-picker` | ^9.13.2 | Calendar | Installed |
 | `input-otp` | ^1.4.2 | OTP input | Installed |
+| `@tanstack/react-table` | ^8.21.0 | Data tables | Installed |
+| `@tanstack/react-query` | ^5.62.0 | Server state management | Installed |
+| `zod` | ^3.24.0 | Schema validation | Installed |
+| `react-hook-form` | ^7.54.0 | Form handling | Installed |
+| `@hookform/resolvers` | ^3.9.0 | Zod resolver for react-hook-form | Installed |
+| `sonner` | ^1.7.0 | Toast notifications | Installed |
+| `cmdk` | ^1.0.0 | Command palette | Installed |
 
 ### Recommended Frontend Additions
 
 | Package | Purpose | Priority |
 |---------|---------|----------|
-| `@tanstack/react-table` | Advanced data tables | **High** |
-| `@tanstack/react-query` | Server state management | **High** |
-| `zod` | Schema validation | **High** |
-| `react-hook-form` | Form handling | Medium (Inertia useForm may suffice) |
-| `sonner` | Toast notifications | Medium |
-| `cmdk` | Command palette | Medium |
 | `vaul` | Drawer component | Low |
-
-```bash
-npm install @tanstack/react-table @tanstack/react-query zod sonner cmdk
-```
 
 ## Package Selection Criteria
 
 ### Must-Have Criteria
 
 1. **Active maintenance** - Regular updates, responsive maintainers
-2. **Laravel compatibility** - Supports Laravel 13
+2. **Laravel compatibility** - Supports Laravel 12
 3. **PHP 8.4 support** - Compatible with latest PHP
 4. **Good documentation** - Clear usage examples
 5. **Test coverage** - Well-tested package
@@ -171,7 +167,7 @@ npm install @tanstack/react-table @tanstack/react-query zod sonner cmdk
 - [ ] GitHub stars > 1000 (or growing rapidly)
 - [ ] Last commit within 3 months
 - [ ] Open issues < 50 (or well-managed)
-- [ ] Compatible with Laravel 13
+- [ ] Compatible with Laravel 12
 - [ ] Compatible with PHP 8.4
 - [ ] Has test suite
 - [ ] Has documentation

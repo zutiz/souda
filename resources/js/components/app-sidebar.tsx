@@ -3,7 +3,6 @@ import {
     CreditCard,
     LayoutGrid,
     ListTodo,
-    Package,
     PanelLeft,
     Settings,
     Users,
@@ -24,7 +23,9 @@ import {
     SidebarMenuItem,
 } from '@/components/ui/sidebar';
 import type { NavItem } from '@/types';
+import { useEnabledModules } from '@/hooks/use-tenant-config';
 import AppLogo from './app-logo';
+import { buildModuleNavItems } from './module-nav-items';
 
 const adminNavItems: NavItem[] = [
     {
@@ -53,6 +54,7 @@ export function AppSidebar() {
     const { auth } = usePage<{
         auth: { is_admin: boolean };
     }>().props;
+    const enabledModules = useEnabledModules();
     const dashboardHref = '/dashboard';
 
     const mainNavItems: NavItem[] = [
@@ -68,21 +70,7 @@ export function AppSidebar() {
         },
     ];
 
-    const productNavItems: NavItem[] = [
-        {
-            title: 'Products',
-            href: '/products',
-            icon: Package,
-            items: [
-                { title: 'All Products', href: '/products' },
-                { title: 'Categories', href: '/products/categories' },
-                { title: 'Brands', href: '/products/brands' },
-                { title: 'Attributes', href: '/products/attributes' },
-                { title: 'Inventory', href: '/products/inventory' },
-                { title: 'Stock Transfers', href: '/products/stock-transfers' },
-            ],
-        },
-    ];
+    const moduleNavItems = buildModuleNavItems(enabledModules);
 
     return (
         <Sidebar collapsible="icon" variant="inset">
@@ -100,7 +88,9 @@ export function AppSidebar() {
 
             <SidebarContent>
                 <NavMain items={mainNavItems} />
-                <NavMain items={productNavItems} label="Products" />
+                {moduleNavItems.length > 0 && (
+                    <NavMain items={moduleNavItems} label="Modules" />
+                )}
             </SidebarContent>
 
             <SidebarFooter>

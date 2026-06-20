@@ -81,6 +81,6 @@ Route::middleware(['web', 'auth', InitializeTenancyByUser::class])->group(functi
     });
 });
 
-// SSLCommerz callback - no auth required (external POST from payment gateway)
-Route::post('/billing/success/sslcommerz', [BillingController::class, 'sslcommerzSuccess'])->name('billing.success.sslcommerz');
+// SSLCommerz callback - no auth required (external POST from payment gateway + browser GET redirect after payment)
+Route::match(['get', 'post'], '/billing/success/sslcommerz', [BillingController::class, 'sslcommerzSuccess'])->name('billing.success.sslcommerz');
 Route::post('/billing/webhook/sslcommerz', [BillingController::class, 'sslcommerzWebhook'])->name('billing.webhook.sslcommerz');

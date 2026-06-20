@@ -126,7 +126,7 @@ public function register(): void
 
     // Middleware aliases
     $router = $this->app['router'];
-    $router->aliasMiddleware('subscription', EnsureSubscribed::class);
+    $router->aliasMiddleware('subscription', EnsureTenantHasSubscription::class);
     $router->aliasMiddleware('feature', EnsureTenantHasFeature::class);
     $router->aliasMiddleware('seat', EnsureSeatAvailable::class);
 }
@@ -177,10 +177,10 @@ public function boot(): void
 }
 ```
 
-### Products Module (Proposed)
+### Product Module
 
 ```php
-// app/Providers/ProductServiceProvider.php
+// app/Modules/Product/Providers/ProductServiceProvider.php
 public function register(): void
 {
     $this->app->singleton(ProductService::class);
@@ -195,12 +195,19 @@ public function register(): void
 
     $this->app->bind(
         StockChecker::class,
-        InventoryStockChecker::class,
+        EloquentStockChecker::class,
+    );
+
+    $this->app->bind(
+        SKUGenerator::class,
+        DefaultSKUGenerator::class,
     );
 }
 
 public function boot(): void
 {
+    $this->loadMigrationsFrom(__DIR__.'/../Database/Migrations/Tenant');
+
     Event::listen(
         ProductCreated::class,
         IndexProductForSearch::class,
@@ -343,53 +350,6 @@ class BillingManager
 }
 ```
 
-### Repository Pattern
-
-```php
-// Contract
-interface ProductRepositoryInterface
-{
-    public function findById(int $id): ?Product;
-    public function findBySku(string $sku): ?Product;
-    public function create(array $data): Product;
-    public function update(Product $product, array $data): bool;
-}
-
-// Implementation
-class EloquentProductRepository implements ProductRepositoryInterface
-{
-    public function __construct(
-        protected Product $model
-    ) {}
-
-    public function findById(int $id): ?Product
-    {
-        return $this->model->query()->find($id);
-    }
-
-    public function findBySku(string $sku): ?Product
-    {
-        return $this->model->query()->where('sku', $sku)->first();
-    }
-
-    public function create(array $data): Product
-    {
-        return $this->model->query()->create($data);
-    }
-
-    public function update(Product $product, array $data): bool
-    {
-        return $product->update($data);
-    }
-}
-
-// Binding
-$this->app->bind(
-    ProductRepositoryInterface::class,
-    EloquentProductRepository::class
-);
-```
-
 ### Strategy Pattern (Payment Gateways)
 
 ```php
@@ -430,6 +390,15 @@ class FlatPricingStrategy implements PricingStrategy { }
 $strategy = $seatService->strategy($plan);
 $overage = $strategy->calculateOverage($tenantId, $plan, $subscription);
 ```
+
+### Module Service Provider Bindings
+
+The project does NOT use the Repository pattern. Services operate directly on Eloquent models, which serve as the data access layer. This reduces boilerplate while maintaining testability through service-level abstraction and mockable contracts.
+
+Instead of repository interfaces, the project uses:
+- **Contracts** (`ProductResolver`, `StockChecker`, `SKUGenerator`, `PricingCalculator`, etc.) bound to concrete implementations
+- **Service classes** (`ProductService`, `StockService`, `CategoryService`) injected directly via auto-resolution
+- **Factory pattern** for gateway drivers (`BillingManager` resolves `StripeDriver`, `SSLCommerzDriver`, etc.)
 
 ## Testing with Container Bindings
 

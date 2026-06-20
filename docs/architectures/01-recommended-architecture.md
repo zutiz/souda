@@ -58,10 +58,12 @@ Multi-tenant SaaS ERP platform for SME F-Commerce and E-Commerce businesses, bui
 
 ### 3. Strict Tenant Isolation
 
-- Multi-database tenancy: each tenant gets isolated MySQL database
+- Hybrid tenancy: shared database (`souda_shared` with `tenant_id` scoping) for free/starter plans, dedicated MySQL databases for enterprise plans
 - Central database holds shared data (plans, subscriptions, users, tenants)
-- Tenant databases hold business data (products, orders, inventory, CRM)
+- Shared database holds tenant-scoped data (configs, settings, tasks)
+- Dedicated tenant databases hold business data (products, orders, inventory, CRM)
 - `InitializeTenancyByUser` middleware enforces tenant context
+- `HasTenantScope` trait and `TenantScope` global scope provide shared-mode isolation
 - Models use `CentralConnection` trait to explicitly stay central
 - Queue jobs are tenant-aware via `QueueTenancyBootstrapper`
 
@@ -88,12 +90,13 @@ Multi-tenant SaaS ERP platform for SME F-Commerce and E-Commerce businesses, bui
 
 | Aspect | Decision |
 |--------|----------|
-| **Mode** | Multi-database (one DB per tenant) |
+| **Mode** | Hybrid (shared DB + dedicated DB per enterprise tenant) |
 | **Identification** | User-based (`InitializeTenancyByUser`) |
-| **Database Naming** | `souda_tenant_{uuid}` |
+| **Database Naming** | Shared: `souda_shared`, Dedicated: `souda_tenant_{uuid}` |
 | **Bootstrappers** | Database, Cache, Filesystem, Queue |
 | **Central Data** | Users, tenants, plans, subscriptions, billing, settings, roles/permissions |
-| **Tenant Data** | Products, orders, inventory, CRM, tasks, business operations |
+| **Shared Data** | Tenant configs, tenant settings, tasks (scoped by `tenant_id`) |
+| **Tenant Data** | Products, orders, inventory, CRM, business operations |
 
 ### Module Communication
 

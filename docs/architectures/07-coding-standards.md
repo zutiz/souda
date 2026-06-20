@@ -25,7 +25,7 @@ Run: `composer run lint` or `vendor/bin/pint --format agent`
 
 ### General PHP Rules
 
-1. **Strict types** - Declare strict types in all PHP files
+1. **Strict types** - `declare(strict_types=1);` in all PHP files
 2. **Type declarations** - Always use explicit return types and parameter types
 3. **Curly braces** - Always use curly braces for control structures, even single-line
 4. **No inline comments** - Use PHPDoc blocks instead
@@ -36,14 +36,14 @@ Run: `composer run lint` or `vendor/bin/pint --format agent`
 
 declare(strict_types=1);
 
-namespace App\Modules\Products\Services;
+namespace App\Modules\Product\Services;
 
-use App\Modules\Products\Models\Product;
-use App\Modules\Products\DTOs\ProductDTO;
+use App\Modules\Product\Models\Product;
+use App\Modules\Product\DTOs\ProductData;
 
 class ProductService
 {
-    public function createProduct(ProductDTO $dto): Product
+    public function createProduct(ProductData $dto): Product
     {
         return Product::create([
             'name' => $dto->name,
@@ -52,7 +52,7 @@ class ProductService
         ]);
     }
 
-    public function getProduct(int $id): ?Product
+    public function getProduct(string $id): ?Product
     {
         return Product::query()->find($id);
     }
@@ -387,31 +387,44 @@ $gateway = env('BILLING_DEFAULT_GATEWAY');
 ### Component Structure
 
 ```tsx
-import { useForm } from '@inertiajs/react'
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { z } from 'zod'
+import { router } from '@inertiajs/react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { mapFormToPayload } from '@/lib/map-form-to-payload'
+
+const productSchema = z.object({
+    name: z.string().min(1, 'Name is required'),
+    sku: z.string().min(1, 'SKU is required'),
+    price: z.number().min(0),
+})
+
+type ProductFormData = z.infer<typeof productSchema>
 
 interface ProductFormProps {
     initialData?: Product
-    action: (data: ProductFormData) => void
 }
 
-export function ProductForm({ initialData, action }: ProductFormProps) {
-    const { data, setData, post, processing } = useForm<ProductFormData>({
-        name: initialData?.name ?? '',
-        sku: initialData?.sku ?? '',
-        price: initialData?.price ?? 0,
+export function ProductForm({ initialData }: ProductFormProps) {
+    const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<ProductFormData>({
+        resolver: zodResolver(productSchema),
+        defaultValues: {
+            name: initialData?.name ?? '',
+            sku: initialData?.sku ?? '',
+            price: initialData?.price ?? 0,
+        },
     })
 
-    function handleSubmit(e: React.FormEvent) {
-        e.preventDefault()
-        post(action(data))
+    function onSubmit(data: ProductFormData) {
+        router.post(route('products.store'), mapFormToPayload(data))
     }
 
     return (
-        <form onSubmit={handleSubmit}>
-            <Input value={data.name} onChange={e => setData('name', e.target.value)} />
-            <Button type="submit" disabled={processing}>
+        <form onSubmit={handleSubmit(onSubmit)}>
+            <Input {...register('name')} error={errors.name?.message} />
+            <Button type="submit" disabled={isSubmitting}>
                 Save
             </Button>
         </form>
@@ -422,39 +435,17 @@ export function ProductForm({ initialData, action }: ProductFormProps) {
 ### Hook Structure
 
 ```tsx
-export function useProducts() {
-    const [products, setProducts] = useState<Product[]>([])
-    const [loading, setLoading] = useState(false)
+import { useQuery } from '@tanstack/react-query'
+import { axios } from '@/lib/axios'
 
-    useEffect(() => {
-        setLoading(true)
-        fetch('/api/products')
-            .then(res => res.json())
-            .then(setProducts)
-            .finally(() => setLoading(false))
-    }, [])
-
-    return { products, loading }
+export function useProducts(filters?: ProductFilters) {
+    return useQuery({
+        queryKey: ['products', filters],
+        queryFn: () => axios.get('/api/products', { params: filters }).then(r => r.data),
+        staleTime: 30_000,
+        gcTime: 5 * 60 * 1000,
+    })
 }
-```
-
-### Import Order
-
-```tsx
-// 1. React imports
-import { useState, useEffect } from 'react'
-
-// 2. Third-party imports
-import { useForm } from '@inertiajs/react'
-import { format } from 'date-fns'
-
-// 3. Internal imports (aliased)
-import { Button } from '@/components/ui/button'
-import { useProducts } from '@/hooks/use-products'
-
-// 4. Relative imports
-import { ProductCard } from './product-card'
-import { types } from '../types'
 ```
 
 ## Testing Standards
@@ -462,10 +453,16 @@ import { types } from '../types'
 ### Pest Tests
 
 ```php
+use App\Modules\Product\Models\Product;
+use Tests\Support\RefreshMultiDatabase;
+
+uses(RefreshMultiDatabase::class);
+
 test('user can create a product', function () {
-    $user = User::factory()->create();
-    $tenant = Tenant::factory()->create();
-    $user->update(['tenant_id' => $tenant->id]);
+    $user = User::factory()->withSubscription()->create();
+    $tenant = $user->tenant;
+
+    tenancy()->initialize($tenant);
 
     actingAs($user);
 
@@ -480,7 +477,12 @@ test('user can create a product', function () {
 });
 
 test('product requires valid sku', function () {
-    actingAs(User::factory()->create());
+    $user = User::factory()->withSubscription()->create();
+    $tenant = $user->tenant;
+
+    tenancy()->initialize($tenant);
+
+    actingAs($user);
 
     $response = $this->post(route('products.store'), [
         'name' => 'Test Product',
@@ -489,6 +491,17 @@ test('product requires valid sku', function () {
     ]);
 
     $response->assertSessionHasErrors('sku');
+});
+
+test('shared model is isolated by tenant scope', function () {
+    $tenant1 = Tenant::factory()->create(['tenancy_mode' => 'shared']);
+    $tenant2 = Tenant::factory()->create(['tenancy_mode' => 'shared']);
+
+    TenantConfig::factory()->create(['tenant_id' => $tenant1->id]);
+    TenantConfig::factory()->create(['tenant_id' => $tenant2->id]);
+
+    tenancy()->initialize($tenant1);
+    expect(TenantConfig::count())->toBe(1);
 });
 ```
 
@@ -534,6 +547,29 @@ chore(deps): update laravel/framework to 13.x
 | `docs` | Documentation |
 | `test` | Tests |
 | `chore` | Maintenance tasks |
+
+## Import Order (TypeScript)
+
+```tsx
+// 1. React imports
+import { useState } from 'react'
+
+// 2. Third-party imports
+import { useQuery } from '@tanstack/react-query'
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { z } from 'zod'
+import { router } from '@inertiajs/react'
+
+// 3. Internal imports (aliased)
+import { Button } from '@/components/ui/button'
+import { useTenantConfig } from '@/hooks/use-tenant-config'
+import StoreProduct from '@/actions/product/StoreProductController'
+
+// 4. Relative imports
+import { ProductCard } from './product-card'
+import { types } from '../types'
+```
 
 ## Automated Checks
 

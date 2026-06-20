@@ -59,12 +59,12 @@ resources/js/
 ### 2. Tenant-Aware Every Layer
 - Every page component receives tenant context via Inertia shared props
 - API requests include tenant scope implicitly through Inertia's request pipeline
-- UI components display tenant-scoped data (logo, branding, store name)
+- UI components display tenant-scoped data (logo, branding, business name)
 
-### 3. Store-Aware UI
-- Product data is always scoped to the current store
-- Store selection in the header filters all product queries
-- Product forms include store_id as a hidden field (set from context)
+### 3. Config-Aware UI
+- Product data is always scoped to the current tenant's config
+- TenantConfig drives available modules, fields, and UI
+- Product forms implicitly scope to the current tenant
 
 ### 4. Strict Typing
 - Every API response has a corresponding TypeScript type in the module's `types/`

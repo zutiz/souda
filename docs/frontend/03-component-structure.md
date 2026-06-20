@@ -106,5 +106,5 @@ Page Component
 | URL state (page, sort, search) | URL search params | Shareable, bookmarkable, back-button |
 | Form state | React Hook Form | Per-field validation, dirty tracking |
 | UI state (open/close, selected) | Component useState | Ephemeral, no reason to hoist |
-| Tenant / Store / User | Inertia shared props | Available on every page load |
+| Tenant / User | Inertia shared props | Available on every page load |
 | Permissions | React Context | Checked across many components |

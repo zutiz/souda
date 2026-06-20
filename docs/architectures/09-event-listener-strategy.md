@@ -13,9 +13,8 @@ Represent significant business occurrences within a module.
 | Module | Events | Purpose |
 |--------|--------|---------|
 | **Billing** | `SubscriptionActivated`, `SubscriptionCancelled`, `SubscriptionExpired`, `PaymentReceived`, `PaymentFailed`, `SeatAllocated`, `SeatReleased`, `SeatOverageInvoiced` | Subscription lifecycle + seat management |
-| **Products** | `ProductCreated`, `ProductUpdated`, `ProductDeleted`, `ProductArchived` | Product catalog changes |
+| **Product** | `ProductCreated`, `ProductUpdated`, `ProductDeleted`, `ProductArchived`, `StockUpdated`, `StockDepleted`, `LowStockAlert`, `StockReservationCreated`, `StockReservationExpired`, `StockTransferCompleted`, `VariantCreated`, `VariantUpdated`, `VariantDeleted`, `ProductPublished` | Product catalog + inventory changes |
 | **Orders** | `OrderCreated`, `OrderPaid`, `OrderShipped`, `OrderDelivered`, `OrderCancelled`, `OrderRefunded` | Order lifecycle |
-| **Inventory** | `StockUpdated`, `StockDepleted`, `StockAdjusted`, `LowStockAlert` | Inventory changes |
 | **CRM** | `ContactCreated`, `ContactUpdated`, `InteractionLogged`, `DealWon`, `DealLost` | Customer activity |
 
 ### 2. System Events
@@ -132,14 +131,14 @@ protected $listen = [
     ],
 
     // Product events
-    \App\Modules\Products\Events\ProductCreated::class => [
-        \App\Modules\Products\Listeners\IndexProductForSearch::class,
-        \App\Modules\Products\Listeners\GenerateProductSKU::class,
+    \App\Modules\Product\Events\ProductCreated::class => [
+        \App\Modules\Product\Listeners\IndexProductForSearch::class,
+        \App\Modules\Product\Listeners\GenerateProductSKU::class,
     ],
 
     // Order events
     \App\Modules\Orders\Events\OrderCreated::class => [
-        \App\Modules\Inventory\Listeners\DeductStock::class,
+        \App\Modules\Product\Listeners\DeductProductStock::class,
         \App\Modules\CRM\Listeners\UpdateCustomerActivity::class,
         \App\Modules\Notifications\Listeners\SendOrderConfirmation::class,
     ],
@@ -148,10 +147,10 @@ protected $listen = [
         \App\Modules\Notifications\Listeners\SendPaymentReceipt::class,
     ],
 
-    // Inventory events
-    \App\Modules\Inventory\Events\StockDepleted::class => [
-        \App\Modules\Products\Listeners\MarkProductUnavailable::class,
-        \App\Modules\Notifications\Listeners\SendLowStockAlert::class,
+    // Product events (inventory)
+    \App\Modules\Product\Events\StockDepleted::class => [
+        \App\Modules\Product\Listeners\MarkProductUnavailable::class,
+        \App\Modules\Product\Listeners\SendStockDepletedNotification::class,
     ],
 
     // Tenant events

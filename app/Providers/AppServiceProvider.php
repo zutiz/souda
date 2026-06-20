@@ -24,6 +24,7 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->configureDefaults();
+        $this->ensureSharedDatabaseExists();
     }
 
     /**
@@ -46,5 +47,20 @@ class AppServiceProvider extends ServiceProvider
                 ->uncompromised()
             : null
         );
+    }
+
+    protected function ensureSharedDatabaseExists(): void
+    {
+        $database = config('database.connections.shared.database', 'souda_shared');
+
+        try {
+            DB::connection('shared')->getPdo();
+        } catch (\Exception $e) {
+            if (str_contains($e->getMessage(), 'Unknown database')) {
+                DB::connection('mysql')->statement(
+                    "CREATE DATABASE IF NOT EXISTS `{$database}` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci"
+                );
+            }
+        }
     }
 }

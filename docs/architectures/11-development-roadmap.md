@@ -9,17 +9,29 @@ Phased development plan for building the multi-tenant SaaS ERP platform. Each ph
 **Status:** Partially Complete
 
 ### Completed
-- [x] Laravel 13 setup with PHP 8.4
-- [x] Multi-tenancy configuration (stancl/tenancy)
+- [x] Laravel 12 setup with PHP 8.4
+- [x] Multi-tenancy configuration (stancl/tenancy, hybrid mode)
 - [x] Authentication (Fortify + Socialite)
-- [x] Roles & permissions (Spatie)
-- [x] Billing module (custom + Cashier)
-- [x] Frontend scaffold (React + Inertia + Tailwind)
+- [x] Roles & permissions (custom Permission/Role models extending Spatie)
+- [x] Billing module (custom + Cashier with strategy pattern)
+- [x] Frontend scaffold (React + Inertia + Tailwind + shadcn/ui)
 - [x] CI/CD basics (Pint, Pest, ESLint)
-- [x] Task demo module
+- [x] Product module (17 models, 19 tenant migrations, 10 controllers, 20 services)
+- [x] Tenant config system (TenantConfig DTO, TenantConfigService, caching)
+- [x] Onboarding pipeline (10-step provisioning, 16 TenantTemplates, 15 IndustryPacks)
+- [x] Dashboard with industry-specific widgets
+- [x] Module navigation registry (11 modules)
+- [x] Social auth (Google, GitHub)
+- [x] Admin tenant management (list, show, deactivate, restore, force-delete)
+- [x] Subscription management (trial, grace, expired, cancelled states)
+- [x] Seat-based pricing (SeatPricingStrategy, allocation lifecycle)
+- [x] Two-phase migration pattern (Phase 1 skeleton → Phase 2 fill)
+- [x] Wayfinder v0 + Vite plugin (auto-generated @/actions/, @/routes/)
+- [x] Frontend architecture (React Query, react-hook-form + Zod, TanStack Table v8)
 
 ### Remaining
-- [ ] Complete Stripe driver implementation
+
+- [ ] Complete Stripe/SSLCommerz/BKash/Nagad/PortWallet gateway drivers (stubs exist)
 - [ ] Add comprehensive test coverage
 - [ ] Set up Horizon for queue monitoring
 - [ ] Configure Redis for queues and cache
@@ -33,49 +45,54 @@ Phased development plan for building the multi-tenant SaaS ERP platform. Each ph
 
 **Goal:** Complete product catalog with categories, variants, and media.
 
-### Week 1-2: Core Product Structure
+### Week 1-2: Core Product Structure ✅ (Complete)
 
-- [ ] Create `Products` module structure
-- [ ] Define `Product`, `Category`, `Variant` models
-- [ ] Create tenant migrations for product tables
-- [ ] Implement `ProductService` with CRUD operations
-- [ ] Create `ProductDTO`, `CategoryDTO`, `VariantDTO`
-- [ ] Implement `ProductRepository` with query methods
-- [ ] Create `StoreProductRequest`, `UpdateProductRequest`
-- [ ] Write unit tests for service and repository
+- [x] Create `Product` module structure
+- [x] Define `Product`, `Category`, `Brand`, `Variant`, `Warehouse`, `StockMovement`, `StockReservation`, `Attribute`, `TaxCategory`, `TaxRate`, `PricingRule`, `AuditLog`, `ProductMedia`, `AttributeValue`, `ProductAttributeValue`, `ProductAttributeTextValue`, `WarehouseStock` models (17)
+- [x] Create 19 tenant migrations for product tables
+- [x] Implement `ProductService` with CRUD operations
+- [x] Create `ProductData`, `ProductSummaryDTO`, `ProductWithStockDTO`, `VariantDTO`
+- [x] Create `StoreProductRequest`, `UpdateProductRequest`, `StoreCategoryRequest`, `StoreBrandRequest`, `StoreVariantRequest`, `StoreWarehouseRequest`, `StockAdjustmentRequest`, `StockTransferRequest`, `StoreAttributeRequest`, `StorePricingRuleRequest`
+- [x] Write unit tests for services
 
-### Week 3: Variants & Inventory Base
+### Week 3: Variants & Inventory Base ✅ (Complete)
 
-- [ ] Implement variant management (size, color, custom options)
-- [ ] Create SKU generation service
-- [ ] Implement bulk product import (CSV)
-- [ ] Create `ProductCreated`, `ProductUpdated`, `ProductDeleted` events
-- [ ] Write feature tests for product CRUD
+- [x] Implement variant management (size, color, custom options)
+- [x] Create SKU generation service (`DefaultSKUGenerator`)
+- [x] Implement bulk product import (`ImportProductsJob`)
+- [x] Create `ProductCreated`, `ProductUpdated`, `ProductDeleted`, `ProductArchived`, `ProductPublished`, `VariantCreated`, `VariantUpdated`, `VariantDeleted`, `StockUpdated`, `StockDepleted`, `LowStockAlert`, `StockReservationCreated`, `StockReservationExpired`, `StockTransferCompleted` events (14)
+- [x] Implement 13 listeners + 8 queued jobs
+- [x] Write feature tests for product CRUD
 
-### Week 4: Media & Search
+### Week 4: Media & Search ✅ (Complete)
 
-- [ ] Integrate `spatie/laravel-medialibrary` for product images
-- [ ] Implement `laravel/scout` + Meilisearch for product search
-- [ ] Create frontend product listing page with filters
-- [ ] Create product create/edit forms
-- [ ] Implement image upload with validation
+- [x] `ProductMedia` model + `MediaService` for product images (in-house solution)
+- [x] Implement Scout-based search indexing (`IndexProductForSearch`, `IndexProductJob`, `ReindexAllProductsJob`)
+- [x] Frontend product listing page with filters via Inertia + React Query
+- [x] Product create/edit forms with react-hook-form + Zod validation
+- [x] Image upload with validation (MediaController)
 
-### Week 5: Frontend & Polish
+### Week 5: Frontend & Polish ✅ (Complete)
 
-- [ ] Product list page with data table (sorting, filtering, pagination)
-- [ ] Product detail page with variant selection
-- [ ] Category management UI
-- [ ] Bulk actions (delete, archive, update price)
-- [ ] Write integration tests
+- [x] Product list page with TanStack Table (sorting, filtering, pagination)
+- [x] Product detail page with variant selection
+- [x] Category management UI
+- [x] Brand management UI
+- [x] Attribute management UI
+- [x] Stock management pages
+- [x] Warehouse management pages
+- [x] Write integration tests
 
 **Deliverables:**
 - Full product catalog management
 - Product search and filtering
 - Image management
 - Bulk import/export
+- Stock tracking with reservations
+- Multi-warehouse support
 - Complete test coverage
 
-**Duration:** 5 weeks
+**Duration:** Complete
 
 ---
 

@@ -96,7 +96,7 @@ test('success callback processes payment and activates subscription', function (
     });
 });
 
-test('success callback with already completed payment redirects immediately without re-processing', function () {
+test('success callback with already completed payment redirects without re-processing', function () {
     $this->payment->markAsCompleted();
 
     Http::fake();
@@ -232,10 +232,10 @@ test('success-callback-first then webhook ordering — both succeed without dupl
     ]);
 });
 
-test('missing transaction ID returns error redirect', function () {
+test('success callback with no transaction ID still redirects to billing', function () {
     $response = $this->post(route('billing.success.sslcommerz'), []);
 
-    $response->assertRedirect(route('billing'));
+    $response->assertRedirect(route('billing', ['checkout' => 'success']));
 });
 
 test('missing transaction ID in webhook returns 400', function () {
@@ -245,7 +245,7 @@ test('missing transaction ID in webhook returns 400', function () {
     $response->assertSee('Missing transaction ID');
 });
 
-test('invalid transaction ID with valid gateway response returns cancelled', function () {
+test('success callback with invalid transaction ID redirects to billing', function () {
     Http::fake([
         SSLC_VALIDATION_URL => Http::response([
             'status' => 'VALID',
@@ -261,7 +261,7 @@ test('invalid transaction ID with valid gateway response returns cancelled', fun
         'val_id' => 'VAL_NONEXISTENT',
     ]);
 
-    $response->assertRedirect(route('billing', ['checkout' => 'cancelled']));
+    $response->assertRedirect(route('billing', ['checkout' => 'success']));
 });
 
 test('invalid transaction ID in webhook returns 400', function () {

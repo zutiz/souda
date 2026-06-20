@@ -18,7 +18,7 @@ Inertia is the primary data transport. On every page visit or form submission, t
 public function index(Request $request)
 {
     return Inertia::render('product/ProductIndex', [
-        'products' => Product::forStore($request->user()->store_id)
+        'products' => Product::query()
             ->paginate($request->per_page ?? 25),
         'categories' => fn () => Category::selectOptions(), // lazy
         'brands' => fn () => Brand::selectOptions(),         // lazy

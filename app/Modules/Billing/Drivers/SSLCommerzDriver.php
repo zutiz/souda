@@ -36,6 +36,7 @@ class SSLCommerzDriver implements BillingGatewayInterface
             'success_url' => $options['success_url'] ?? '',
             'fail_url' => $options['cancel_url'] ?? '',
             'cancel_url' => $options['cancel_url'] ?? '',
+            'ipn_url' => $options['ipn_url'] ?? '',
             'cus_name' => $options['customer_name'] ?? '',
             'cus_email' => $options['customer_email'] ?? '',
             'cus_phone' => $options['customer_phone'] ?? '',

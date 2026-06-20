@@ -3,7 +3,9 @@
 namespace App\Http\Middleware;
 
 use App\Models\AppSetting;
+use App\Modules\BusinessType\ValueObjects\TenantConfig;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Middleware;
 
@@ -54,6 +56,33 @@ class HandleInertiaRequests extends Middleware
                 'error' => $request->session()->get('error'),
             ],
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
+            'tenant_config' => fn () => $this->resolveTenantConfig($request),
         ];
+    }
+
+    protected function resolveTenantConfig(Request $request): ?array
+    {
+        $user = $request->user();
+
+        if ($user === null || $user->tenant === null) {
+            return null;
+        }
+
+        try {
+            $config = app(TenantConfig::class);
+
+            return [
+                'business_type' => $config->businessType,
+                'modules' => $config->enabledModules,
+            ];
+        } catch (\Throwable $e) {
+            Log::warning('Failed to resolve tenant config', [
+                'user_id' => $user->id,
+                'tenant_id' => $user->tenant->id,
+                'error' => $e->getMessage(),
+            ]);
+
+            return null;
+        }
     }
 }

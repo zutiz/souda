@@ -6,19 +6,25 @@ use App\Models\Tenant;
 use App\Tenancy\Scopes\TenantScope;
 use App\Tenancy\TenantManager;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Support\Facades\App;
 
 trait HasTenantScope
 {
     public static function bootHasTenantScope(): void
     {
-        static::addGlobalScope(App::make(TenantScope::class));
+        try {
+            static::addGlobalScope(app(TenantScope::class));
+        } catch (\Throwable) {
+            // No app context available (e.g., unit tests without booted application)
+        }
 
         static::creating(function ($model) {
-            $manager = App::make(TenantManager::class);
-
-            if ($manager->initialized() && $manager->isShared() && ! $model->tenant_id) {
-                $model->tenant_id = $manager->id();
+            try {
+                $manager = app(TenantManager::class);
+                if ($manager->initialized() && $manager->isShared() && ! $model->tenant_id) {
+                    $model->tenant_id = $manager->id();
+                }
+            } catch (\Throwable) {
+                // No app context available
             }
         });
     }

@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Modules\Billing\Models\Subscription;
+use App\Modules\BusinessType\Models\BusinessType;
 use Database\Factories\TenantFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -25,6 +26,10 @@ use Stancl\Tenancy\Database\TenantCollection;
  * @property Carbon|null $deleted_at
  * @property string $tenancy_mode
  * @property string|null $database_name
+ * @property int|null $business_type_id
+ * @property string $onboarding_status
+ * @property array|null $onboarding_progress
+ * @property Carbon|null $onboarded_at
  * @property array<string, mixed> $data
  */
 class Tenant extends BaseTenant implements TenantWithDatabase
@@ -41,6 +46,10 @@ class Tenant extends BaseTenant implements TenantWithDatabase
             'trial_ends_at',
             'trial_used',
             'tenancy_mode',
+            'business_type_id',
+            'onboarding_status',
+            'onboarding_progress',
+            'onboarded_at',
             'database_name',
             'created_at',
             'updated_at',
@@ -53,6 +62,8 @@ class Tenant extends BaseTenant implements TenantWithDatabase
         return [
             'trial_ends_at' => 'datetime',
             'trial_used' => 'boolean',
+            'onboarded_at' => 'datetime',
+            'onboarding_progress' => 'array',
         ];
     }
 
@@ -84,6 +95,11 @@ class Tenant extends BaseTenant implements TenantWithDatabase
     public function subscriptions(): HasMany
     {
         return $this->hasMany(Subscription::class, 'tenant_id', 'id');
+    }
+
+    public function businessType(): BelongsTo
+    {
+        return $this->belongsTo(BusinessType::class, 'business_type_id');
     }
 
     public function activeSubscription(): ?Subscription

@@ -5,7 +5,9 @@ namespace App\Listeners;
 use App\Events\TenantModeChanged;
 use App\Models\TenantSetting;
 use App\Modules\Billing\Events\SubscriptionActivated;
-use App\Tenancy\TenantManager;
+use App\Modules\BusinessType\Models\BusinessType;
+use App\Modules\BusinessType\Services\BusinessTypeEngine;
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
@@ -23,6 +25,8 @@ class ProvisionTenantDatabase
         if (! $tenant) {
             return;
         }
+
+        $this->ensureSharedDatabaseReady();
 
         $planSlug = $subscription->plan?->slug ?? 'free';
 
@@ -46,6 +50,51 @@ class ProvisionTenantDatabase
             $this->provisionSharedTenant($tenant);
         } else {
             $this->provisionDedicatedTenant($subscription, $tenant);
+        }
+
+        $this->assignBusinessType($tenant, $subscription);
+    }
+
+    protected function ensureSharedDatabaseReady(): void
+    {
+        try {
+            DB::connection('mysql')->statement(
+                'CREATE DATABASE IF NOT EXISTS `souda_shared` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci'
+            );
+        } catch (\Throwable $e) {
+            Log::warning('Could not create shared database', ['error' => $e->getMessage()]);
+        }
+
+        try {
+            Artisan::call('migrate', [
+                '--force' => true,
+                '--path' => 'database/migrations/shared',
+                '--database' => 'shared',
+            ]);
+        } catch (\Throwable $e) {
+            Log::warning('Could not run shared migrations', ['error' => $e->getMessage()]);
+        }
+    }
+
+    protected function assignBusinessType(mixed $tenant, mixed $subscription): void
+    {
+        if ($tenant->business_type_id) {
+            return;
+        }
+
+        $businessType = BusinessType::query()->where('is_active', true)->orderBy('id')->first();
+
+        if ($businessType === null) {
+            return;
+        }
+
+        try {
+            app(BusinessTypeEngine::class)->assignBusinessType($tenant, $businessType->slug);
+        } catch (\Throwable $e) {
+            Log::warning('Failed to assign default business type', [
+                'tenant_id' => $tenant->id,
+                'error' => $e->getMessage(),
+            ]);
         }
     }
 
@@ -167,6 +216,7 @@ class ProvisionTenantDatabase
 
         DB::connection('shared')->table('tenant_settings')
             ->where('tenant_id', $tenant->id)
+            ->orderBy('id')
             ->each(function ($row) {
                 $data = json_decode(json_encode($row), true);
                 unset($data['id'], $data['tenant_id']);
@@ -176,6 +226,7 @@ class ProvisionTenantDatabase
 
         DB::connection('shared')->table('tasks')
             ->where('tenant_id', $tenant->id)
+            ->orderBy('id')
             ->each(function ($row) {
                 $data = json_decode(json_encode($row), true);
                 unset($data['id'], $data['tenant_id']);
@@ -191,6 +242,7 @@ class ProvisionTenantDatabase
         tenancy()->initialize($tenant);
 
         DB::table('tenant_settings')
+            ->orderBy('id')
             ->each(function ($row) use ($tenant) {
                 $data = json_decode(json_encode($row), true);
                 unset($data['id']);
@@ -200,6 +252,7 @@ class ProvisionTenantDatabase
             });
 
         DB::table('tasks')
+            ->orderBy('id')
             ->each(function ($row) use ($tenant) {
                 $data = json_decode(json_encode($row), true);
                 unset($data['id']);

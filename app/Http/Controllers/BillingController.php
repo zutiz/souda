@@ -131,6 +131,7 @@ class BillingController extends Controller
                 options: [
                     'success_url' => route('billing.success.sslcommerz'),
                     'cancel_url' => route('billing').'?checkout=cancelled',
+                    'ipn_url' => route('billing.webhook.sslcommerz'),
                     'customer_name' => $tenant->name,
                     'customer_email' => $request->user()?->email,
                     'product_name' => $plan->name ?? 'Subscription',
@@ -245,61 +246,45 @@ class BillingController extends Controller
     {
         $transactionId = $request->input('tran_id');
 
-        if (! $transactionId) {
-            return redirect()->route('billing')->with('error', 'Payment verification failed.');
-        }
-
-        $payment = $this->paymentService->findByTransactionId($transactionId);
-
-        if ($payment && $payment->status === PaymentStatus::Completed) {
-            return redirect()->route('billing', ['checkout' => 'success']);
-        }
-
-        try {
-            $this->subscriptionService->verifyAndActivate(
-                transactionId: $transactionId,
-                gateway: 'sslcommerz',
-                payload: $request->all(),
-            );
-
-            return redirect()->route('billing', ['checkout' => 'success']);
-        } catch (PaymentFailedException $e) {
-            Log::warning('SSLCommerz verification failed, completing locally', [
-                'tran_id' => $transactionId,
-                'error' => $e->getMessage(),
-            ]);
-
+        if ($transactionId) {
             $payment = $this->paymentService->findByTransactionId($transactionId);
 
-            if ($payment && $payment->status !== PaymentStatus::Completed && $payment->subscription) {
+            if ($payment && $payment->status !== PaymentStatus::Completed) {
                 try {
-                    $payment->markAsCompleted($transactionId);
-                    $this->subscriptionService->activateSubscription($payment->subscription);
-
-                    return redirect()->route('billing', ['checkout' => 'success']);
-                } catch (\Throwable $activationError) {
-                    Log::error('SSLCommerz local completion failed', [
+                    $this->subscriptionService->verifyAndActivate(
+                        transactionId: $transactionId,
+                        gateway: 'sslcommerz',
+                        payload: $request->all(),
+                    );
+                } catch (PaymentFailedException $e) {
+                    Log::warning('SSLCommerz success fallback: verifying payment failed, completing locally', [
                         'tran_id' => $transactionId,
-                        'error' => $activationError->getMessage(),
+                        'error' => $e->getMessage(),
+                    ]);
+
+                    $payment = $this->paymentService->findByTransactionId($transactionId);
+
+                    if ($payment && $payment->status !== PaymentStatus::Completed && $payment->subscription) {
+                        try {
+                            $payment->markAsCompleted($transactionId);
+                            $this->subscriptionService->activateSubscription($payment->subscription);
+                        } catch (\Throwable $activationError) {
+                            Log::error('SSLCommerz success fallback: local completion failed', [
+                                'tran_id' => $transactionId,
+                                'error' => $activationError->getMessage(),
+                            ]);
+                        }
+                    }
+                } catch (\Throwable $e) {
+                    Log::error('SSLCommerz success fallback failed, re-checking payment status', [
+                        'tran_id' => $transactionId,
+                        'error' => $e->getMessage(),
                     ]);
                 }
             }
-
-            return redirect()->route('billing', ['checkout' => 'cancelled']);
-        } catch (\Throwable $e) {
-            Log::error('SSLCommerz success callback failed, re-checking payment status', [
-                'tran_id' => $transactionId,
-                'error' => $e->getMessage(),
-            ]);
-
-            $payment = $this->paymentService->findByTransactionId($transactionId);
-
-            if ($payment && $payment->status === PaymentStatus::Completed) {
-                return redirect()->route('billing', ['checkout' => 'success']);
-            }
-
-            return redirect()->route('billing', ['checkout' => 'cancelled']);
         }
+
+        return redirect()->route('billing', ['checkout' => 'success']);
     }
 
     public function sslcommerzWebhook(Request $request)

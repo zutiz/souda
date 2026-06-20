@@ -4,6 +4,7 @@ namespace App\Console\Commands\Tenant;
 
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\DB;
 
 class MigrateSharedCommand extends Command
 {
@@ -16,6 +17,17 @@ class MigrateSharedCommand extends Command
     public function handle(): int
     {
         $this->info('Running shared database migrations...');
+
+        $database = config('database.connections.shared.database', 'souda_shared');
+
+        try {
+            DB::statement("CREATE DATABASE IF NOT EXISTS `{$database}` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci");
+            $this->info("Database [{$database}] created or already exists.");
+        } catch (\Throwable $e) {
+            $this->warn("Could not create database: {$e->getMessage()}");
+
+            return self::FAILURE;
+        }
 
         $params = [
             '--force' => true,

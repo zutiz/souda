@@ -37,6 +37,7 @@ class CreateNewUser implements CreatesNewUsers
         Validator::make($input, [
             ...$this->profileRules(),
             'password' => $this->passwordRules(),
+            'business_type_slug' => ['sometimes', 'string', 'exists:business_types,slug'],
         ])->validate();
 
         // Note: No DB::transaction() wrapper here because Tenant creation
@@ -54,6 +55,11 @@ class CreateNewUser implements CreatesNewUsers
         $user->save();
 
         $tenant->update(['owner_id' => $user->id]);
+
+        // Store business type selection for post-registration onboarding
+        if (isset($input['business_type_slug'])) {
+            session()->put('onboarding.business_type', $input['business_type_slug']);
+        }
 
         $this->billingEmailService->sendWelcomeRegistered($user->fresh(['tenant']));
 

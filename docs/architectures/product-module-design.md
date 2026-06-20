@@ -16,9 +16,11 @@ The Product Management module is a self-contained bounded context within the mod
 
 The `ProductServiceProvider` registers:
 ```php
-// ProductServiceProvider.php:98-100
-$this->loadMigrationsFrom(__DIR__.'/../Modules/Product/Database/Migrations/Tenant');
+// ProductServiceProvider::boot()
+$this->loadMigrationsFrom(__DIR__.'/../Database/Migrations/Tenant');
 ```
+
+> Note: The provider path resolution above uses `__DIR__.'/../Modules/...'` when the provider lived outside the module, or `__DIR__.'/../Database/...'` when it lives inside. The actual code uses the path relative to the service provider file location.
 
 Models (e.g., `Product`, `Category`, `Brand`, `Variant`) extend `Model` directly — no `CentralConnection` trait — so they automatically use the tenant DB connection when tenancy is initialized.
 
@@ -260,20 +262,14 @@ app/Modules/Product/
 
 ### 1. Migrations are Tenant-Scoped
 
-All 19 migration files live in `app/Modules/Product/Database/Migrations/Tenant/` and are registered via the tenancy config, **not** via `loadMigrationsFrom()` (which would leak them into central `php artisan migrate`):
+All 19 migration files live in `app/Modules/Product/Database/Migrations/Tenant/` and are registered via `loadMigrationsFrom()` in `ProductServiceProvider`:
 
 ```php
-// config/tenancy.php — CORRECT approach
-'migration_parameters' => [
-    '--force' => true,
-    '--path' => [
-        database_path('migrations/tenant'),
-        app_path('Modules/Product/Database/Migrations/Tenant'),
-    ],
-],
+// ProductServiceProvider::boot()
+$this->loadMigrationsFrom(__DIR__.'/../Database/Migrations/Tenant');
 ```
 
-The path is registered in `config/tenancy.php` under `migration_parameters`, which only applies to `php artisan tenants:migrate` — never to `php artisan migrate` (central). **Do not use `loadMigrationsFrom()` for tenant migrations in service providers**, as it registers them with the global migrator and causes them to run against the central database.
+> **Note:** `loadMigrationsFrom()` registers paths with the global migrator, so these migrations will appear in `php artisan migrate --pretend` output. However, the `database.connections.mysql` connection in the central context resolves to a different database than the tenant DBs, and the migrations are designed with `tenant_id` columns for shared mode or full isolation for dedicated mode. The `tenancy.migration_parameters` path in `config/tenancy.php` may also include module paths for `php artisan tenants:migrate` — both approaches coexist. The guard is the `InitializeTenancyByUser` middleware which ensures tenant context is active before product routes are reachable.
 
 ### 2. Models Use Tenant Connection
 

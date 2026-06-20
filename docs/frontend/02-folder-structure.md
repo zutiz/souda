@@ -9,7 +9,7 @@ resources/js/
 ├── modules/                           # Feature domains (self-contained)
 │   ├── shared/                        # Cross-module shared code
 │   │   ├── components/                # DataTable, Form, FilterPanel, PageHeader
-│   │   ├── hooks/                     # useTenant, useStore, useDebounce, usePermissions
+│   │   ├── hooks/                     # useTenant, useDebounce, usePermissions
 │   │   ├── providers/                 # QueryClientProvider, TenantProvider
 │   │   ├── types/                     # Pagination, Sort, Filter generics
 │   │   └── lib/                       # formatCurrency, formatDate, cn
@@ -123,7 +123,6 @@ resources/js/modules/shared/
 ├── hooks/
 │   ├── use-debounce.ts                # Debounce hook
 │   ├── use-tenant.ts                  # Current tenant context
-│   ├── use-store.ts                   # Current store context
 │   ├── use-permissions.ts             # Permission check hook
 │   └── use-pagination.ts              # URL-driven pagination
 │

@@ -158,6 +158,62 @@ arch('controllers')
     ->toHaveSuffix('Controller');
 ```
 
+## Project-Specific Patterns (Souda)
+
+### Tenancy Testing
+
+This project uses `RefreshMultiDatabase` trait (in `tests/Support/`). Apply to feature test files:
+
+```php
+uses(RefreshMultiDatabase::class);
+```
+
+**User factory with tenant + subscription:**
+```php
+$user = User::factory()->withSubscription()->create();
+$this->actingAs($user);
+```
+
+**Cross-tenant isolation pattern:**
+```php
+$user = User::factory()->withSubscription()->create();
+$otherUser = User::factory()->withSubscription()->create();
+
+tenancy()->initialize($otherUser->tenant);
+$task = Task::factory()->create();
+tenancy()->end();
+
+$this->actingAs($user)
+    ->get(route('tasks.show', $task))
+    ->assertForbidden();
+```
+
+**Billing tests** — billing models use `CentralConnection`, query outside tenant context:
+```php
+$plan = Plan::factory()->create(['monthly_price' => 0]);
+$subscription = SubscriptionService::createSubscription($user->tenant, $plan, 'free', 'monthly');
+expect($subscription->status)->toBe(SubscriptionStatus::Active);
+```
+
+### HasTenantScope Safety
+
+The `HasTenantScope` trait wraps `app()` calls in try-catch for test safety. `TestCase::setUp()` resets `Model::$booting` via reflection. Do NOT remove these guards.
+
+### Useful Factories
+
+- `User::factory()->withSubscription()->create()` — user + tenant + active subscription
+- `Tenant::factory()->create(['tenancy_mode' => 'dedicated'])` — dedicated-mode tenant
+- `Plan::factory()` — billing plan
+- `Task::factory()` — tenant-scoped task
+
+### Command Tests
+
+```php
+$this->artisan('subscription:expire-expired --dry-run')
+    ->expectsOutputToContain('DRY RUN')
+    ->assertExitCode(0);
+```
+
 ## Common Pitfalls
 
 - Not importing `use function Pest\Laravel\mock;` before using mock
@@ -165,3 +221,6 @@ arch('controllers')
 - Forgetting datasets for repetitive validation tests
 - Deleting tests without approval
 - Forgetting `assertNoJavaScriptErrors()` in browser tests
+- Not using `RefreshMultiDatabase` for tenant tests
+- Forgetting `afterEach` tenant cleanup: `$tenant->delete(); $tenant->forceDelete();`
+- Not clearing `Model::$booting` state across test classes

@@ -33,6 +33,7 @@ use App\Modules\Product\Models\Category;
 use App\Modules\Product\Models\Product;
 use App\Modules\Product\Models\StockReservation;
 use App\Modules\Product\Models\Variant;
+use App\Modules\Product\Models\Warehouse;
 use App\Modules\Product\Models\WarehouseStock;
 use App\Modules\Product\Observers\ProductObserver;
 use App\Modules\Product\Observers\StockReservationObserver;

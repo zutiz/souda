@@ -10,7 +10,7 @@ All application state falls into one of four categories, each with a specific ma
 | **URL state** | Page number, sort column, search query, filters | Source of truth in URL search params | `useSearchParams` |
 | **Form state** | Field values, dirty state, validation errors | Ephemeral, scoped to form lifecycle | React Hook Form |
 | **UI state** | Sidebar open, selected tab, modal open | Component-local, short-lived | `useState` / `useReducer` |
-| **Shared context** | Tenant, store, user, permissions | Available app-wide, changes infrequently | Inertia shared props + React Context |
+| **Shared context** | Tenant, user, permissions | Available app-wide, changes infrequently | Inertia shared props + React Context |
 | **Page state** | Active filter set, expanded rows | Lives in page component, passed as props | `useState` |
 
 ## State Architecture Diagram
@@ -18,7 +18,7 @@ All application state falls into one of four categories, each with a specific ma
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │                      Inertia Shared Props                     │
-│  tenant, store, user, permissions, notifications             │
+│  tenant, user, permissions, notifications                    │
 │  (available on every page via usePage().props)               │
 └───────────────────────┬─────────────────────────────────────┘
                         │
@@ -30,7 +30,7 @@ All application state falls into one of four categories, each with a specific ma
 │  (rare changes)  │ │  State   │ │  (frequent changes)  │
 │                  │ │          │ │                      │
 │  TenantProvider  │ │ Page     │ │  QueryClient         │
-│  StoreProvider   │ │ Sort     │ │  useQuery            │
+│                  │ │ Sort     │ │  useQuery            │
 │  Permission      │ │ Search   │ │  useMutation         │
 │    Provider      │ │ Filters  │ │  queryClient         │
 └─────────────────┘ └──────────┘ │    .invalidateQueries │
@@ -136,6 +136,6 @@ User clicks "Next Page"
 | Updating product status inline | React Query `useMutation` with optimistic update |
 | Filtering product list | URL search params |
 | Opening a delete confirmation dialog | Component `useState` |
-| Switching stores | Inertia shared prop change + full page reload |
+| Switching views | Inertia page visit with new props |
 | Checking if user can edit products | React Context `usePermissions` |
 | Showing unread notification count | Inertia shared prop (polled or pushed) |

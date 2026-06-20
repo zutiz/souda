@@ -21,7 +21,7 @@ Non-critical page data loads after the page renders:
 
 ```
 // Controller: non-critical data deferred
-Inertia::render('Products/Index', [
+Inertia::render('product/ProductIndex', [
     'products' => Product::paginate(25),        // Critical: loads immediately
     'stats' => Inertia::defer(fn () => [        // Deferred: loads after paint
         'total_products' => Product::count(),

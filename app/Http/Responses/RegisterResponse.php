@@ -10,8 +10,11 @@ class RegisterResponse implements RegisterResponseContract
 {
     public function toResponse($request): Response
     {
-        return $request->wantsJson()
-            ? new JsonResponse('', 201)
-            : redirect()->intended(config('fortify.home'));
+        if ($request->wantsJson()) {
+            return new JsonResponse('', 201);
+        }
+
+        // Redirect new users to onboarding flow
+        return redirect()->intended('/onboarding');
     }
 }

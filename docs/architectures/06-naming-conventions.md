@@ -195,9 +195,8 @@ class OrderCreated
 | Module | Directory | Description |
 |--------|-----------|-------------|
 | Billing | `app/Modules/Billing/` | Subscription and payment processing |
-| Products | `app/Modules/Products/` | Product catalog management |
+| Product | `app/Modules/Product/` | Product catalog management (incl. inventory, stock, categories) |
 | Orders | `app/Modules/Orders/` | Order processing and management |
-| Inventory | `app/Modules/Inventory/` | Stock tracking and management |
 | CRM | `app/Modules/CRM/` | Customer relationship management |
 
 ### Module Internal Structure
