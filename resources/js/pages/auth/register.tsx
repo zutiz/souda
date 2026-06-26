@@ -1,5 +1,6 @@
 import { Form, Head } from '@inertiajs/react';
 import { Github } from 'lucide-react';
+import { useState } from 'react';
 import { redirect as socialRedirect } from '@/actions/App/Http/Controllers/Auth/SocialAuthController';
 import InputError from '@/components/input-error';
 import TextLink from '@/components/text-link';
@@ -15,6 +16,13 @@ type Props = {
     socialProviders: Array<{
         key: string;
         label: string;
+    }>;
+    businessTypes?: Array<{
+        id: number;
+        slug: string;
+        name: string;
+        description: string;
+        icon: string | null;
     }>;
 };
 
@@ -49,7 +57,9 @@ function SocialProviderIcon({ providerKey }: { providerKey: string }) {
     return null;
 }
 
-export default function Register({ socialProviders }: Props) {
+export default function Register({ socialProviders, businessTypes = [] }: Props) {
+    const [selectedType, setSelectedType] = useState<string>('');
+
     return (
         <AuthLayout
             title="Create an account"
@@ -166,10 +176,31 @@ export default function Register({ socialProviders }: Props) {
                                 />
                             </div>
 
+                            {businessTypes.length > 0 && (
+                                <div className="grid gap-2">
+                                    <Label>Business Type</Label>
+                                    <select
+                                        name="business_type_slug"
+                                        value={selectedType}
+                                        onChange={(e) => setSelectedType(e.target.value)}
+                                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                                        tabIndex={5}
+                                    >
+                                        <option value="">Select your industry...</option>
+                                        {businessTypes.map((type) => (
+                                            <option key={type.id} value={type.slug}>
+                                                {type.name}
+                                            </option>
+                                        ))}
+                                    </select>
+                                    <InputError message={errors.business_type_slug} />
+                                </div>
+                            )}
+
                             <Button
                                 type="submit"
                                 className="mt-2 w-full"
-                                tabIndex={5}
+                                tabIndex={6}
                                 data-test="register-user-button"
                             >
                                 {processing && <Spinner />}
@@ -179,7 +210,7 @@ export default function Register({ socialProviders }: Props) {
 
                         <div className="text-center text-sm text-muted-foreground">
                             Already have an account?{' '}
-                            <TextLink href={login()} tabIndex={6}>
+                            <TextLink href={login()} tabIndex={7}>
                                 Log in
                             </TextLink>
                         </div>

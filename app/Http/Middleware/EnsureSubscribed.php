@@ -2,23 +2,26 @@
 
 namespace App\Http\Middleware;
 
-use App\Models\Tenant;
+use App\Modules\Billing\Services\SubscriptionService;
 use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 
 class EnsureSubscribed
 {
+    public function __construct(
+        private readonly SubscriptionService $subscriptionService,
+    ) {}
+
     public function handle(Request $request, Closure $next): Response
     {
         if ($request->user()?->hasRole('admin')) {
             return $next($request);
         }
 
-        /** @var Tenant|null $tenant */
         $tenant = tenant();
 
-        if ($tenant && ($tenant->subscribed() || $tenant->onGenericTrial())) {
+        if ($tenant && $this->subscriptionService->tenantHasAccessibleSubscription($tenant->id)) {
             return $next($request);
         }
 

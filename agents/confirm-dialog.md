@@ -55,4 +55,5 @@ import { Button } from '@/components/ui/button';
 - `resources/js/pages/admin/pricing/index.tsx` — archive and reactivate product dialogs
 - `resources/js/pages/admin/pricing/show.tsx` — deactivate price dialog
 - `resources/js/pages/tasks/index.tsx` — delete task dialog
+- `resources/js/pages/team/index.tsx` — remove member / cancel invitation dialogs
 - `resources/js/components/delete-user.tsx` — delete account dialog (with password confirmation)

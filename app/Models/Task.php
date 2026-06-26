@@ -2,14 +2,16 @@
 
 namespace App\Models;
 
+use App\Tenancy\Models\Concerns\HasTenantScope;
+use App\Tenancy\TenantManager;
+use Database\Factories\TaskFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Stancl\Tenancy\Database\Concerns\BelongsToTenant;
 
 class Task extends Model
 {
-    /** @use HasFactory<\Database\Factories\TaskFactory> */
-    use BelongsToTenant, HasFactory;
+    /** @use HasFactory<TaskFactory> */
+    use HasFactory, HasTenantScope;
 
     /**
      * @var list<string>
@@ -28,5 +30,16 @@ class Task extends Model
         return [
             'is_completed' => 'boolean',
         ];
+    }
+
+    public function getConnectionName(): ?string
+    {
+        $manager = app(TenantManager::class);
+
+        if ($manager->initialized() && $manager->isShared()) {
+            return 'shared';
+        }
+
+        return null;
     }
 }

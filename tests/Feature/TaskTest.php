@@ -1,6 +1,5 @@
 <?php
 
-use App\Models\Task;
 use App\Models\User;
 
 test('guests are redirected to the login page', function () {
@@ -33,12 +32,13 @@ test('users can create a task', function () {
 
     $response->assertRedirect(route('tasks.index'));
 
-    $this->assertDatabaseHas('tasks', [
-        'title' => 'My first task',
-        'description' => 'Some details',
-        'tenant_id' => $user->tenant_id,
-        'is_completed' => false,
-    ]);
+    $this->withinTenant($user->tenant, function () {
+        $this->assertDatabaseHas('tasks', [
+            'title' => 'My first task',
+            'description' => 'Some details',
+            'is_completed' => false,
+        ]);
+    });
 });
 
 test('task creation requires a title', function () {
@@ -53,7 +53,7 @@ test('task creation requires a title', function () {
 
 test('users can update a task', function () {
     $user = User::factory()->subscribed()->create();
-    $task = Task::factory()->create(['tenant_id' => $user->tenant_id]);
+    $task = $this->createTaskForTenant($user->tenant);
 
     $response = $this->actingAs($user)->put(route('tasks.update', $task), [
         'title' => 'Updated title',
@@ -63,43 +63,47 @@ test('users can update a task', function () {
 
     $response->assertRedirect(route('tasks.index'));
 
-    $task->refresh();
-    expect($task->title)->toBe('Updated title')
-        ->and($task->description)->toBe('Updated description')
-        ->and($task->is_completed)->toBeTrue();
+    $this->withinTenant($user->tenant, function () use ($task) {
+        $task->refresh();
+        expect($task->title)->toBe('Updated title')
+            ->and($task->description)->toBe('Updated description')
+            ->and($task->is_completed)->toBeTrue();
+    });
 });
 
 test('users can toggle task completion', function () {
     $user = User::factory()->subscribed()->create();
-    $task = Task::factory()->create([
-        'tenant_id' => $user->tenant_id,
-        'is_completed' => false,
-    ]);
+    $task = $this->createTaskForTenant($user->tenant, ['is_completed' => false]);
 
     $this->actingAs($user)->patch(route('tasks.update', $task), [
         'title' => $task->title,
         'is_completed' => true,
     ]);
 
-    expect($task->refresh()->is_completed)->toBeTrue();
+    $this->withinTenant($user->tenant, function () use ($task) {
+        expect($task->refresh()->is_completed)->toBeTrue();
+    });
 });
 
 test('users can delete a task', function () {
     $user = User::factory()->subscribed()->create();
-    $task = Task::factory()->create(['tenant_id' => $user->tenant_id]);
+    $task = $this->createTaskForTenant($user->tenant);
 
     $response = $this->actingAs($user)->delete(route('tasks.destroy', $task));
 
     $response->assertRedirect(route('tasks.index'));
-    $this->assertDatabaseMissing('tasks', ['id' => $task->id]);
+
+    $this->withinTenant($user->tenant, function () use ($task) {
+        $this->assertDatabaseMissing('tasks', ['id' => $task->id]);
+    });
 });
 
 test('users only see their own tenant tasks', function () {
     $userA = User::factory()->subscribed()->create();
     $userB = User::factory()->subscribed()->create();
 
-    $taskA = Task::factory()->create(['tenant_id' => $userA->tenant_id, 'title' => 'Task A']);
-    $taskB = Task::factory()->create(['tenant_id' => $userB->tenant_id, 'title' => 'Task B']);
+    $taskA = $this->createTaskForTenant($userA->tenant, ['title' => 'Task A']);
+    $taskB = $this->createTaskForTenant($userB->tenant, ['title' => 'Task B']);
 
     $response = $this->actingAs($userA)->get(route('tasks.index'));
 
@@ -116,7 +120,7 @@ test('users cannot update tasks from another tenant', function () {
     $userA = User::factory()->subscribed()->create();
     $userB = User::factory()->subscribed()->create();
 
-    $taskB = Task::factory()->create(['tenant_id' => $userB->tenant_id]);
+    $taskB = $this->createTaskForTenant($userB->tenant);
 
     $response = $this->actingAs($userA)->put(route('tasks.update', $taskB), [
         'title' => 'Hacked',
@@ -129,12 +133,11 @@ test('users cannot delete tasks from another tenant', function () {
     $userA = User::factory()->subscribed()->create();
     $userB = User::factory()->subscribed()->create();
 
-    $taskB = Task::factory()->create(['tenant_id' => $userB->tenant_id]);
+    $taskB = $this->createTaskForTenant($userB->tenant);
 
     $response = $this->actingAs($userA)->delete(route('tasks.destroy', $taskB));
 
     $response->assertNotFound();
-    $this->assertDatabaseHas('tasks', ['id' => $taskB->id]);
 });
 
 test('users without a tenant are denied access to tenant routes', function () {

@@ -1,9 +1,9 @@
 <?php
 
+use App\Mail\WelcomeRegisteredMail;
 use App\Models\AppSetting;
 use App\Models\Tenant;
 use App\Models\User;
-use App\Mail\WelcomeRegisteredMail;
 use Illuminate\Support\Facades\Mail;
 
 test('registration screen can be rendered', function () {

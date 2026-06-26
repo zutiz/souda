@@ -6,7 +6,7 @@ import { defineConfig } from 'vite';
 
 export default defineConfig({
     server: {
-        host: 'saasforgekit-lite.test'
+        host: 'souda.test',
     },
     plugins: [
         laravel({

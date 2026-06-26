@@ -1,20 +1,34 @@
-import { Head } from '@inertiajs/react';
+import { Head, Link } from '@inertiajs/react';
 import axios from 'axios';
 import {
     AlertCircle,
     CalendarDays,
     CheckCircle,
+    ChevronDown,
     CreditCard,
     ExternalLink,
+    Wallet,
     XCircle,
 } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import {
     index,
-    checkout,
-    portal,
+    subscribe,
+    cancel,
+    invoices,
 } from '@/actions/App/Http/Controllers/BillingController';
 import Heading from '@/components/heading';
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+    AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -41,7 +55,7 @@ type PlanPrice = {
 };
 
 type Plan = {
-    id: string;
+    id: number;
     name: string;
     description: string | null;
     metadata: Record<string, string>;
@@ -69,11 +83,18 @@ type Subscription = {
     features: string[];
 };
 
+type Gateway = {
+    id: string;
+    label: string;
+};
+
 type Props = {
     plans: Plan[];
     subscription: Subscription | null;
     on_generic_trial: boolean;
     generic_trial_ends_at: string | null;
+    available_gateways: Gateway[];
+    trial_used: boolean;
 };
 
 const breadcrumbs: BreadcrumbItem[] = [{ title: 'Billing', href: index().url }];
@@ -149,9 +170,33 @@ function formatStatus(status: string): string {
     return status.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
-async function redirectTo(url: string, data?: Record<string, string>) {
-    const response = await axios.post(url, data);
-    window.location.href = response.data.url;
+async function redirectToCheckout(
+    url: string,
+    data: Record<string, unknown>,
+): Promise<{ success: boolean; error?: string }> {
+    try {
+        const response = await axios.post(url, data);
+        if (response.data.checkout_url) {
+            window.location.href = response.data.checkout_url;
+            return { success: true };
+        }
+        window.location.href = `${window.location.pathname}?checkout=success`;
+        return { success: true };
+    } catch (err: unknown) {
+        const message =
+            err &&
+            typeof err === 'object' &&
+            'response' in err &&
+            err.response &&
+            typeof err.response === 'object' &&
+            'data' in err.response &&
+            err.response.data &&
+            typeof err.response.data === 'object' &&
+            'error' in err.response.data
+                ? String(err.response.data.error)
+                : 'Something went wrong. Please try again.';
+        return { success: false, error: message };
+    }
 }
 
 function daysUntil(dateString: string): number {
@@ -167,44 +212,112 @@ function daysUntil(dateString: string): number {
 }
 
 function SubscribeButton({
+    planId,
     price,
     label,
     isPopular,
+    selectedGateway = 'manual',
+    hasTrial,
+    availableGateways,
 }: {
+    planId: number;
     price: PlanPrice;
     label?: string;
     isPopular?: boolean;
+    selectedGateway: string;
+    hasTrial?: boolean;
+    availableGateways: Gateway[];
 }) {
     const [loading, setLoading] = useState(false);
+    const [showGatewayPicker, setShowGatewayPicker] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+    const dropdownRef = useRef<HTMLDivElement>(null);
 
-    async function handleCheckout() {
+    const buttonLabel = hasTrial ? 'Start Free Trial' : 'Get Started';
+
+    async function handleCheckout(gateway: string) {
         setLoading(true);
-        try {
-            await redirectTo(checkout.url(), { price_id: price.id });
-        } catch {
-            setLoading(false);
+        setError(null);
+        setShowGatewayPicker(false);
+        const result = await redirectToCheckout(subscribe.url(), {
+            plan_id: planId,
+            gateway,
+            billing_cycle: price.interval,
+        });
+        if (!result.success && result.error) {
+            setError(result.error);
         }
+        setLoading(false);
     }
 
     return (
-        <Button
-            onClick={handleCheckout}
-            disabled={loading}
-            variant={isPopular ? 'default' : 'outline'}
-            className="w-full gap-2"
-        >
-            {loading ? <Spinner /> : <CreditCard className="size-4" />}
-            {label || 'Get Started'}
-        </Button>
+        <div className="w-full" ref={dropdownRef}>
+            <Button
+                onClick={() => {
+                    if (availableGateways.length > 1) {
+                        setShowGatewayPicker(!showGatewayPicker);
+                    } else {
+                        handleCheckout(availableGateways[0]?.id ?? 'manual');
+                    }
+                }}
+                disabled={loading}
+                variant={isPopular ? 'default' : 'outline'}
+                className="w-full gap-2"
+            >
+                {loading ? (
+                    <Spinner />
+                ) : (
+                    <>
+                        <CreditCard className="size-4" />
+                        {buttonLabel}
+                        {availableGateways.length > 1 && (
+                            <ChevronDown className="ml-auto size-4 opacity-50" />
+                        )}
+                    </>
+                )}
+            </Button>
+
+            {showGatewayPicker && (
+                <div className="absolute z-50 mt-2 w-full overflow-hidden rounded-lg border bg-popover shadow-md">
+                    <div className="p-2">
+                        <p className="px-2 py-1.5 text-xs font-medium text-muted-foreground">
+                            Choose payment method
+                        </p>
+                        {availableGateways.map((gateway) => (
+                            <button
+                                key={gateway.id}
+                                type="button"
+                                onClick={() => handleCheckout(gateway.id)}
+                                className="flex w-full items-center gap-3 rounded-md px-3 py-2.5 text-left text-sm transition-colors hover:bg-accent"
+                            >
+                                <Wallet className="size-4 text-muted-foreground" />
+                                <span>{gateway.label}</span>
+                            </button>
+                        ))}
+                    </div>
+                </div>
+            )}
+
+            {error && (
+                <div className="mt-3 flex items-start gap-2 rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2 text-xs text-destructive">
+                    <AlertCircle className="mt-0.5 size-3.5 shrink-0" />
+                    <span>{error}</span>
+                </div>
+            )}
+        </div>
     );
 }
 
 function PlanCard({
     plan,
     selectedInterval,
+    availableGateways,
+    trialUsed,
 }: {
     plan: Plan;
     selectedInterval: string;
+    availableGateways: Gateway[];
+    trialUsed: boolean;
 }) {
     const isPopular = plan.metadata?.popular === 'true';
     const price = plan.prices.find((p) => p.interval === selectedInterval);
@@ -283,16 +396,27 @@ function PlanCard({
             )}
             <CardFooter>
                 <SubscribeButton
+                    planId={plan.id}
                     price={price}
                     label={plan.metadata?.cta}
                     isPopular={isPopular}
+                    availableGateways={availableGateways}
+                    hasTrial={trialEnabled && trialDays > 0 && !trialUsed}
                 />
             </CardFooter>
         </Card>
     );
 }
 
-function PricingGrid({ plans }: { plans: Plan[] }) {
+function PricingGrid({
+    plans,
+    availableGateways,
+    trialUsed,
+}: {
+    plans: Plan[];
+    availableGateways: Gateway[];
+    trialUsed: boolean;
+}) {
     const intervals = useMemo(() => getAvailableIntervals(plans), [plans]);
     const defaultInterval = intervals.includes('month')
         ? 'month'
@@ -369,6 +493,8 @@ function PricingGrid({ plans }: { plans: Plan[] }) {
                         key={plan.id}
                         plan={plan}
                         selectedInterval={selectedInterval}
+                        availableGateways={availableGateways}
+                        trialUsed={trialUsed}
                     />
                 ))}
             </div>
@@ -385,11 +511,16 @@ function formatDate(dateString: string): string {
 }
 
 function SubscriptionCard({ subscription }: { subscription: Subscription }) {
-    const [loading, setLoading] = useState(false);
+    const [cancelLoading, setCancelLoading] = useState(false);
 
-    async function handlePortal() {
-        setLoading(true);
-        await redirectTo(portal.url());
+    async function handleCancelSubscription() {
+        setCancelLoading(true);
+        try {
+            await axios.post(cancel.url());
+            window.location.reload();
+        } catch {
+            setCancelLoading(false);
+        }
     }
 
     return (
@@ -514,20 +645,58 @@ function SubscriptionCard({ subscription }: { subscription: Subscription }) {
                     </>
                 )}
             </CardContent>
-            <CardFooter>
-                <Button
-                    onClick={handlePortal}
-                    disabled={loading}
-                    className="gap-2"
-                >
-                    {loading ? (
-                        <Spinner />
-                    ) : (
-                        <ExternalLink className="size-4" />
-                    )}
-                    Manage Billing
-                </Button>
-            </CardFooter>
+            {!subscription.cancelled && (
+                <CardFooter className="flex justify-between border-t px-6 py-4">
+                    <Button variant="outline" size="sm" asChild>
+                        <Link href={invoices().url}>
+                            <ExternalLink className="mr-2 size-4" />
+                            View Invoices
+                        </Link>
+                    </Button>
+                    <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                            <Button variant="destructive" size="sm">
+                                <XCircle className="mr-2 size-4" />
+                                Cancel Subscription
+                            </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                            <AlertDialogHeader>
+                                <AlertDialogTitle>
+                                    Cancel Subscription?
+                                </AlertDialogTitle>
+                                <AlertDialogDescription>
+                                    This will cancel your subscription at the
+                                    end of the current billing period. You will
+                                    retain access until{' '}
+                                    {subscription.current_period_end
+                                        ? formatDate(
+                                              subscription.current_period_end,
+                                          )
+                                        : 'the end of your billing period'}
+                                    . This action cannot be undone.
+                                </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                                <AlertDialogCancel>
+                                    Keep Subscription
+                                </AlertDialogCancel>
+                                <AlertDialogAction
+                                    onClick={handleCancelSubscription}
+                                    disabled={cancelLoading}
+                                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                >
+                                    {cancelLoading ? (
+                                        <Spinner />
+                                    ) : (
+                                        'Yes, Cancel'
+                                    )}
+                                </AlertDialogAction>
+                            </AlertDialogFooter>
+                        </AlertDialogContent>
+                    </AlertDialog>
+                </CardFooter>
+            )}
         </Card>
     );
 }
@@ -537,13 +706,6 @@ function PastSubscriptionBanner({
 }: {
     subscription: Subscription;
 }) {
-    const [loading, setLoading] = useState(false);
-
-    async function handlePortal() {
-        setLoading(true);
-        await redirectTo(portal.url());
-    }
-
     const statusMessage =
         subscription.stripe_status === 'canceled'
             ? 'Your subscription has been cancelled.'
@@ -571,19 +733,11 @@ function PastSubscriptionBanner({
                         )}
                     </div>
                 </div>
-                <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handlePortal}
-                    disabled={loading}
-                    className="shrink-0 gap-2"
-                >
-                    {loading ? (
-                        <Spinner />
-                    ) : (
+                <Button variant="outline" size="sm" asChild className="shrink-0 gap-2">
+                    <Link href={invoices().url}>
                         <ExternalLink className="size-4" />
-                    )}
-                    View Billing History
+                        View Billing History
+                    </Link>
                 </Button>
             </CardContent>
         </Card>
@@ -635,6 +789,8 @@ export default function Billing({
     subscription,
     on_generic_trial,
     generic_trial_ends_at,
+    available_gateways,
+    trial_used,
 }: Props) {
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
@@ -656,7 +812,11 @@ export default function Billing({
                 {subscription?.active ? (
                     <SubscriptionCard subscription={subscription} />
                 ) : (
-                    <PricingGrid plans={plans} />
+                    <PricingGrid
+                        plans={plans}
+                        availableGateways={available_gateways}
+                        trialUsed={trial_used}
+                    />
                 )}
 
                 {subscription && !subscription.active && (

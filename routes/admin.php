@@ -2,8 +2,7 @@
 
 use App\Http\Controllers\Admin\AppSettingsController;
 use App\Http\Controllers\Admin\DashboardController;
-use App\Http\Controllers\Admin\StripePriceController;
-use App\Http\Controllers\Admin\StripePricingController;
+use App\Http\Controllers\Admin\PlanController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Middleware\EnsureAdmin;
 use Illuminate\Support\Facades\Route;
@@ -22,22 +21,32 @@ Route::middleware(['web', 'auth', EnsureAdmin::class])
         Route::delete('users/{user}/force', [UserController::class, 'forceDestroy'])
             ->name('users.force-destroy');
 
-        Route::resource('pricing', StripePricingController::class)
-            ->parameters(['pricing' => 'id']);
+        // Pricing routes — keep /admin/pricing/* path for frontend compatibility.
+        Route::resource('pricing', PlanController::class)
+            ->parameters(['pricing' => 'plan'])
+            ->names([
+                'index' => 'pricing.index',
+                'create' => 'pricing.create',
+                'store' => 'pricing.store',
+                'show' => 'pricing.show',
+                'edit' => 'pricing.edit',
+                'update' => 'pricing.update',
+                'destroy' => 'pricing.destroy',
+            ]);
 
-        Route::post('pricing/reorder', [StripePricingController::class, 'reorder'])
+        Route::post('pricing/reorder', [PlanController::class, 'reorder'])
             ->name('pricing.reorder');
 
-        Route::post('pricing/{id}/features', [StripePricingController::class, 'updateFeatures'])
+        Route::post('pricing/{plan}/features', [PlanController::class, 'updateFeatures'])
             ->name('pricing.features.update');
 
-        Route::post('pricing/{id}/prices', [StripePriceController::class, 'store'])
+        Route::post('pricing/{plan}/prices', [PlanController::class, 'storePrice'])
             ->name('pricing.prices.store');
 
-        Route::put('prices/{id}', [StripePriceController::class, 'update'])
+        Route::put('prices/{price}', [PlanController::class, 'updatePrice'])
             ->name('prices.update');
 
-        Route::delete('prices/{id}', [StripePriceController::class, 'destroy'])
+        Route::delete('prices/{price}', [PlanController::class, 'destroyPrice'])
             ->name('prices.destroy');
 
         Route::redirect('settings', '/admin/settings/general');

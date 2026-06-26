@@ -6,6 +6,7 @@ use App\Actions\Fortify\CreateNewUser;
 use App\Actions\Fortify\ResetUserPassword;
 use App\Http\Responses\LoginResponse;
 use App\Http\Responses\RegisterResponse;
+use App\Modules\BusinessType\Models\BusinessType;
 use App\Services\SocialAuthService;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
@@ -78,6 +79,10 @@ class FortifyServiceProvider extends ServiceProvider
 
         Fortify::registerView(fn () => Inertia::render('auth/register', [
             'socialProviders' => $socialAuthService->enabledProvidersForAuthentication(),
+            'businessTypes' => BusinessType::query()
+                ->where('is_active', true)
+                ->orderBy('name')
+                ->get(['id', 'slug', 'name', 'description', 'icon']),
         ]));
 
         Fortify::twoFactorChallengeView(fn () => Inertia::render('auth/two-factor-challenge'));

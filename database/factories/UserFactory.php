@@ -2,13 +2,15 @@
 
 namespace Database\Factories;
 
+use App\Models\Role;
 use App\Models\Tenant;
+use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 
 /**
- * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\User>
+ * @extends Factory<User>
  */
 class UserFactory extends Factory
 {
@@ -32,6 +34,17 @@ class UserFactory extends Factory
         ];
     }
 
+    public function configure(): static
+    {
+        return $this->afterCreating(function (User $user) {
+            if ($user->tenant_id) {
+                Tenant::where('id', $user->tenant_id)
+                    ->whereNull('owner_id')
+                    ->update(['owner_id' => $user->id]);
+            }
+        });
+    }
+
     /**
      * Indicate that the model's email address should be unverified.
      */
@@ -49,7 +62,7 @@ class UserFactory extends Factory
     {
         return $this->afterCreating(function ($user) {
             $user->assignRole(
-                \Spatie\Permission\Models\Role::firstOrCreate(['name' => 'admin'])
+                Role::firstOrCreate(['name' => 'admin'])
             );
         });
     }

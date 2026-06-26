@@ -2,16 +2,11 @@
 
 namespace App\Providers;
 
-use App\Listeners\StripeEventListener;
-use App\Models\Tenant;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Event;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
-use Laravel\Cashier\Cashier;
-use Laravel\Cashier\Events\WebhookReceived;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -28,11 +23,8 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        Cashier::useCustomerModel(Tenant::class);
-
-        Event::listen(WebhookReceived::class, StripeEventListener::class);
-
         $this->configureDefaults();
+        $this->ensureSharedDatabaseExists();
     }
 
     /**
@@ -55,5 +47,20 @@ class AppServiceProvider extends ServiceProvider
                 ->uncompromised()
             : null
         );
+    }
+
+    protected function ensureSharedDatabaseExists(): void
+    {
+        $database = config('database.connections.shared.database', 'souda_shared');
+
+        try {
+            DB::connection('shared')->getPdo();
+        } catch (\Exception $e) {
+            if (str_contains($e->getMessage(), 'Unknown database')) {
+                DB::connection('mysql')->statement(
+                    "CREATE DATABASE IF NOT EXISTS `{$database}` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci"
+                );
+            }
+        }
     }
 }

@@ -2,11 +2,11 @@
 
 namespace Database\Factories;
 
-use App\Models\Tenant;
+use App\Models\Task;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
- * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\Task>
+ * @extends Factory<Task>
  */
 class TaskFactory extends Factory
 {
@@ -16,7 +16,6 @@ class TaskFactory extends Factory
     public function definition(): array
     {
         return [
-            'tenant_id' => Tenant::factory(),
             'title' => fake()->sentence(3),
             'description' => fake()->optional()->paragraph(),
             'is_completed' => fake()->boolean(20),

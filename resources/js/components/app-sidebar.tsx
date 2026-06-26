@@ -9,7 +9,7 @@ import {
 } from 'lucide-react';
 import { edit as adminSettingsGeneral } from '@/actions/App/Http/Controllers/Admin/AppSettingsController';
 import AdminDashboard from '@/actions/App/Http/Controllers/Admin/DashboardController';
-import { index as pricingIndex } from '@/actions/App/Http/Controllers/Admin/StripePricingController';
+import { index as pricingIndex } from '@/actions/App/Http/Controllers/Admin/PlanController';
 import { index as usersIndex } from '@/actions/App/Http/Controllers/Admin/UserController';
 import { NavMain } from '@/components/nav-main';
 import { NavUser } from '@/components/nav-user';
@@ -17,40 +17,36 @@ import {
     Sidebar,
     SidebarContent,
     SidebarFooter,
-    SidebarGroup,
-    SidebarGroupLabel,
     SidebarHeader,
     SidebarMenu,
     SidebarMenuButton,
     SidebarMenuItem,
 } from '@/components/ui/sidebar';
 import type { NavItem } from '@/types';
+import { useEnabledModules } from '@/hooks/use-tenant-config';
 import AppLogo from './app-logo';
+import { buildModuleNavItems } from './module-nav-items';
 
 const adminNavItems: NavItem[] = [
     {
         title: 'Dashboard',
         href: AdminDashboard.url(),
         icon: PanelLeft,
-        prefetch: false,
     },
     {
         title: 'Users',
         href: usersIndex(),
         icon: Users,
-        prefetch: false,
     },
     {
         title: 'Pricing',
         href: pricingIndex(),
         icon: CreditCard,
-        prefetch: false,
     },
     {
         title: 'Settings',
         href: adminSettingsGeneral(),
         icon: Settings,
-        prefetch: false,
     },
 ];
 
@@ -58,6 +54,7 @@ export function AppSidebar() {
     const { auth } = usePage<{
         auth: { is_admin: boolean };
     }>().props;
+    const enabledModules = useEnabledModules();
     const dashboardHref = '/dashboard';
 
     const mainNavItems: NavItem[] = [
@@ -72,6 +69,8 @@ export function AppSidebar() {
             icon: ListTodo,
         },
     ];
+
+    const moduleNavItems = buildModuleNavItems(enabledModules);
 
     return (
         <Sidebar collapsible="icon" variant="inset">
@@ -89,6 +88,9 @@ export function AppSidebar() {
 
             <SidebarContent>
                 <NavMain items={mainNavItems} />
+                {moduleNavItems.length > 0 && (
+                    <NavMain items={moduleNavItems} label="Modules" />
+                )}
             </SidebarContent>
 
             <SidebarFooter>
