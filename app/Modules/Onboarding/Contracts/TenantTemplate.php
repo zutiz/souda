@@ -21,4 +21,6 @@ interface TenantTemplate
     public function notificationDefaults(): array;
 
     public function initialData(): array;
+
+    public function defaultStores(): array;
 }

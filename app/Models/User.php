@@ -6,10 +6,12 @@ namespace App\Models;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Facades\Storage;
 use Laravel\Fortify\TwoFactorAuthenticatable;
 use Spatie\Permission\Traits\HasRoles;
 use Stancl\Tenancy\Database\Concerns\CentralConnection;
@@ -26,6 +28,7 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
+        'avatar',
     ];
 
     /**
@@ -33,6 +36,8 @@ class User extends Authenticatable
      *
      * @var list<string>
      */
+    protected $appends = ['avatar_url'];
+
     protected $hidden = [
         'password',
         'two_factor_secret',
@@ -40,9 +45,21 @@ class User extends Authenticatable
         'remember_token',
     ];
 
+    public function getAvatarUrlAttribute(): ?string
+    {
+        return $this->avatar ? Storage::url($this->avatar) : null;
+    }
+
     public function tenant(): BelongsTo
     {
         return $this->belongsTo(Tenant::class);
+    }
+
+    public function tenants(): BelongsToMany
+    {
+        return $this->belongsToMany(Tenant::class, 'tenant_user')
+            ->withPivot(['role', 'is_default'])
+            ->withTimestamps();
     }
 
     public function socialAccounts(): HasMany

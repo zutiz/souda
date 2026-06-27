@@ -204,6 +204,12 @@ class ProductService
             $query->where('type', $criteria->type->value);
         }
 
+        if ($criteria->storeId !== null) {
+            $query->whereHas('stores', fn ($q) => $q->where('store_product.store_id', $criteria->storeId)
+                ->where('store_product.is_visible', true)
+            );
+        }
+
         if ($criteria->minPrice !== null) {
             $query->where('base_price', '>=', $criteria->minPrice);
         }

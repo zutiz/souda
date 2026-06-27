@@ -12,6 +12,7 @@ use App\Modules\Product\Services\BrandService;
 use App\Modules\Product\Services\CategoryService;
 use App\Modules\Product\Services\ProductService;
 use App\Modules\Product\ValueObjects\ProductSearchCriteria;
+use App\Modules\Store\Services\StoreContextManager;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -26,16 +27,24 @@ class ProductController
         protected ProductService $productService,
         protected CategoryService $categoryService,
         protected BrandService $brandService,
+        protected StoreContextManager $storeContext,
     ) {}
 
     public function index(Request $request): Response
     {
         $criteria = ProductSearchCriteria::fromRequest($request->all());
+        $storeId = $this->storeContext->id();
+
+        if ($storeId) {
+            $criteria->storeId = $storeId;
+        }
+
         $products = $this->productService->listProducts($criteria);
 
         return Inertia::render('Product/Index', [
             'products' => $products,
             'filters' => $criteria->toQueryParams(),
+            'currentStoreId' => $storeId,
         ]);
     }
 
@@ -53,6 +62,16 @@ class ProductController
 
         $dto = ProductDTO::fromRequest($request->validated());
         $product = $this->productService->createProduct($dto);
+
+        $storeId = $this->storeContext->id();
+        if ($storeId) {
+            $product->stores()->attach($storeId, [
+                'price' => $dto->basePrice,
+                'is_visible' => true,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+        }
 
         return redirect()->route('products.index')
             ->with('success', 'Product created successfully.');

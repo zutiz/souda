@@ -7,6 +7,7 @@ use App\Modules\BusinessType\Models\BusinessType;
 use Database\Factories\TenantFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -27,6 +28,7 @@ use Stancl\Tenancy\Database\TenantCollection;
  * @property string $tenancy_mode
  * @property string|null $database_name
  * @property int|null $business_type_id
+ * @property string|null $logo
  * @property string $onboarding_status
  * @property array|null $onboarding_progress
  * @property Carbon|null $onboarded_at
@@ -42,6 +44,7 @@ class Tenant extends BaseTenant implements TenantWithDatabase
         return [
             'id',
             'name',
+            'logo',
             'owner_id',
             'trial_ends_at',
             'trial_used',
@@ -85,6 +88,13 @@ class Tenant extends BaseTenant implements TenantWithDatabase
     public function user(): HasOne
     {
         return $this->hasOne(User::class);
+    }
+
+    public function users(): BelongsToMany
+    {
+        return $this->belongsToMany(User::class, 'tenant_user')
+            ->withPivot(['role', 'is_default'])
+            ->withTimestamps();
     }
 
     public function owner(): BelongsTo

@@ -1,5 +1,11 @@
 import { Form, Head } from '@inertiajs/react';
-import { Github } from 'lucide-react';
+import { Github, Store as StoreIcon } from 'lucide-react';
+import {
+    ShoppingCart, Pill, UtensilsCrossed, Coffee, Cake,
+    Scissors, Sparkles, Monitor, Shirt, Palette,
+    Hammer, Warehouse, Truck, Sprout, BookOpen,
+    type LucideIcon,
+} from 'lucide-react';
 import { useState } from 'react';
 import { redirect as socialRedirect } from '@/actions/App/Http/Controllers/Auth/SocialAuthController';
 import InputError from '@/components/input-error';
@@ -7,10 +13,17 @@ import TextLink from '@/components/text-link';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Spinner } from '@/components/ui/spinner';
 import AuthLayout from '@/layouts/auth-layout';
 import { login } from '@/routes';
 import { store } from '@/routes/register';
+
+const iconMap: Record<string, LucideIcon> = {
+    ShoppingCart, Pill, UtensilsCrossed, Coffee, Cake,
+    Scissors, Sparkles, Monitor, Shirt, Palette,
+    Hammer, Warehouse, Truck, Sprout, BookOpen,
+};
 
 type Props = {
     socialProviders: Array<{
@@ -59,6 +72,8 @@ function SocialProviderIcon({ providerKey }: { providerKey: string }) {
 
 export default function Register({ socialProviders, businessTypes = [] }: Props) {
     const [selectedType, setSelectedType] = useState<string>('');
+    const selectedBusinessType = businessTypes.find((t) => t.slug === selectedType);
+    const SelectedIcon = selectedBusinessType ? (iconMap[selectedBusinessType.icon ?? ''] ?? StoreIcon) : StoreIcon;
 
     return (
         <AuthLayout
@@ -176,23 +191,47 @@ export default function Register({ socialProviders, businessTypes = [] }: Props)
                                 />
                             </div>
 
+                            <div className="grid gap-2">
+                                <Label htmlFor="business_name">Business Name</Label>
+                                <Input
+                                    id="business_name"
+                                    type="text"
+                                    required
+                                    tabIndex={5}
+                                    autoComplete="organization"
+                                    name="business_name"
+                                    placeholder="e.g., Sakura Bakery"
+                                />
+                                <InputError message={errors.business_name} />
+                            </div>
+
                             {businessTypes.length > 0 && (
                                 <div className="grid gap-2">
                                     <Label>Business Type</Label>
-                                    <select
-                                        name="business_type_slug"
-                                        value={selectedType}
-                                        onChange={(e) => setSelectedType(e.target.value)}
-                                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                                        tabIndex={5}
-                                    >
-                                        <option value="">Select your industry...</option>
-                                        {businessTypes.map((type) => (
-                                            <option key={type.id} value={type.slug}>
-                                                {type.name}
-                                            </option>
-                                        ))}
-                                    </select>
+                                    <Select value={selectedType} onValueChange={setSelectedType}>
+                                        <SelectTrigger tabIndex={6}>
+                                            <SelectValue placeholder="Select your industry...">
+                                                <span className="flex items-center gap-2">
+                                                    <SelectedIcon className="h-4 w-4 text-muted-foreground" />
+                                                    {selectedBusinessType?.name}
+                                                </span>
+                                            </SelectValue>
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {businessTypes.map((type) => {
+                                                const Icon = iconMap[type.icon ?? ''] ?? StoreIcon;
+                                                return (
+                                                    <SelectItem key={type.id} value={type.slug}>
+                                                        <span className="flex items-center gap-2">
+                                                            <Icon className="h-4 w-4 text-muted-foreground" />
+                                                            {type.name}
+                                                        </span>
+                                                    </SelectItem>
+                                                );
+                                            })}
+                                        </SelectContent>
+                                    </Select>
+                                    <input type="hidden" name="business_type_slug" value={selectedType} />
                                     <InputError message={errors.business_type_slug} />
                                 </div>
                             )}
@@ -200,7 +239,7 @@ export default function Register({ socialProviders, businessTypes = [] }: Props)
                             <Button
                                 type="submit"
                                 className="mt-2 w-full"
-                                tabIndex={6}
+                                tabIndex={7}
                                 data-test="register-user-button"
                             >
                                 {processing && <Spinner />}

@@ -28,6 +28,7 @@ class ProvisioningPipeline
         private ConfigurePOSStep $configurePOS,
         private CreateDefaultTeamStep $createTeam,
         private BuildTenantConfigStep $buildConfig,
+        private CreateDefaultStoreStep $createDefaultStore,
     ) {
         $this->steps = [
             $this->createTenant,
@@ -40,6 +41,7 @@ class ProvisioningPipeline
             $this->configurePOS,
             $this->createTeam,
             $this->buildConfig,
+            $this->createDefaultStore,
         ];
     }
 

@@ -3,6 +3,8 @@
 use App\Http\Middleware\HandleAppearance;
 use App\Http\Middleware\HandleInertiaRequests;
 use App\Http\Middleware\InitializeTenancyByUser;
+use App\Modules\Store\Exceptions\StoreLimitExceededException;
+use App\Modules\Store\Http\Middleware\InitializeStoreContext;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -37,7 +39,19 @@ return Application::configure(basePath: dirname(__DIR__))
             before: SubstituteBindings::class,
             prepend: InitializeTenancyByUser::class,
         );
+
+        $middleware->prependToPriorityList(
+            before: SubstituteBindings::class,
+            prepend: InitializeStoreContext::class,
+        );
+
+        $middleware->alias([
+            'store.context' => InitializeStoreContext::class,
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
-        //
+        $exceptions->render(function (StoreLimitExceededException $e) {
+            return redirect()->route('billing')
+                ->with('error', $e->getMessage());
+        });
     })->create();

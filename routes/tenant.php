@@ -11,6 +11,7 @@ use App\Modules\Product\Http\Controllers\BrandController;
 use App\Modules\Product\Http\Controllers\CategoryController;
 use App\Modules\Product\Http\Controllers\ProductController;
 use App\Modules\Product\Http\Controllers\StockController;
+use App\Modules\Store\Http\Controllers\StoreController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -27,6 +28,19 @@ use Inertia\Inertia;
 
 Route::middleware(['web', 'auth', InitializeTenancyByUser::class])->group(function () {
     Route::middleware('subscription')->group(function () {
+
+        // === Store Management (no store context) ===
+        Route::get('/stores', [StoreController::class, 'index'])->name('stores.index');
+        Route::get('/stores/create', [StoreController::class, 'create'])->name('stores.create');
+        Route::post('/stores', [StoreController::class, 'store'])->name('stores.store');
+        Route::get('/stores/{store}', [StoreController::class, 'show'])->name('stores.show');
+        Route::get('/stores/{store}/edit', [StoreController::class, 'edit'])->name('stores.edit');
+        Route::put('/stores/{store}', [StoreController::class, 'update'])->name('stores.update');
+        Route::delete('/stores/{store}', [StoreController::class, 'destroy'])->name('stores.destroy');
+        Route::post('/stores/{store}/switch', [StoreController::class, 'switch'])->name('stores.switch');
+        Route::post('/stores/{store}/set-default', [StoreController::class, 'setDefault'])->name('stores.set-default');
+
+        // === Existing routes (outside store context) ===
         Route::get('/dashboard', function () {
             return Inertia::render('dashboard');
         })->name('dashboard');
@@ -79,6 +93,16 @@ Route::middleware(['web', 'auth', InitializeTenancyByUser::class])->group(functi
         Route::delete('/team/{allocation}', [TeamController::class, 'destroy'])->name('team.destroy');
         Route::post('/team/{allocation}/resend', [TeamController::class, 'resend'])->name('team.resend');
     });
+});
+
+// === Store-scoped routes ===
+Route::middleware([
+    'web', 'auth', InitializeTenancyByUser::class,
+    'store.context', 'subscription',
+])->prefix('{store}')->group(function () {
+    Route::get('/dashboard', function () {
+        return Inertia::render('dashboard');
+    })->name('store.dashboard');
 });
 
 // SSLCommerz callback - no auth required (external POST from payment gateway + browser GET redirect after payment)

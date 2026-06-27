@@ -1,10 +1,11 @@
-import { Link, usePage } from '@inertiajs/react';
+import { usePage } from '@inertiajs/react';
 import {
     CreditCard,
     LayoutGrid,
     ListTodo,
     PanelLeft,
     Settings,
+    Store as StoreIcon,
     Users,
 } from 'lucide-react';
 import { edit as adminSettingsGeneral } from '@/actions/App/Http/Controllers/Admin/AppSettingsController';
@@ -13,18 +14,17 @@ import { index as pricingIndex } from '@/actions/App/Http/Controllers/Admin/Plan
 import { index as usersIndex } from '@/actions/App/Http/Controllers/Admin/UserController';
 import { NavMain } from '@/components/nav-main';
 import { NavUser } from '@/components/nav-user';
+import { StoreSwitcher } from '@/components/store-switcher';
+import { TenantSwitcher } from '@/components/tenant-switcher';
 import {
     Sidebar,
     SidebarContent,
     SidebarFooter,
     SidebarHeader,
-    SidebarMenu,
-    SidebarMenuButton,
-    SidebarMenuItem,
+    SidebarSeparator,
 } from '@/components/ui/sidebar';
 import type { NavItem } from '@/types';
 import { useEnabledModules } from '@/hooks/use-tenant-config';
-import AppLogo from './app-logo';
 import { buildModuleNavItems } from './module-nav-items';
 
 const adminNavItems: NavItem[] = [
@@ -64,6 +64,11 @@ export function AppSidebar() {
             icon: LayoutGrid,
         },
         {
+            title: 'Stores',
+            href: '/stores',
+            icon: StoreIcon,
+        },
+        {
             title: 'Tasks',
             href: '/tasks',
             icon: ListTodo,
@@ -74,16 +79,14 @@ export function AppSidebar() {
 
     return (
         <Sidebar collapsible="icon" variant="inset">
-            <SidebarHeader>
-                <SidebarMenu>
-                    <SidebarMenuItem>
-                        <SidebarMenuButton size="lg" asChild>
-                            <Link href={dashboardHref} prefetch>
-                                <AppLogo />
-                            </Link>
-                        </SidebarMenuButton>
-                    </SidebarMenuItem>
-                </SidebarMenu>
+            <SidebarHeader className="p-0">
+                <div className="px-3 py-2">
+                    <TenantSwitcher />
+                </div>
+                <SidebarSeparator />
+                <div className="px-3 py-1">
+                    <StoreSwitcher />
+                </div>
             </SidebarHeader>
 
             <SidebarContent>

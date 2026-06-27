@@ -243,6 +243,7 @@ return [
         '--realpath' => true,
         '--path' => [
             database_path('migrations/tenant'),
+            app_path('Modules/Store/Database/Migrations/Tenant'),
             app_path('Modules/Product/Database/Migrations/Tenant'),
         ],
     ],

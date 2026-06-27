@@ -18,6 +18,7 @@ readonly class ProductSearchCriteria
         public ?int $minPrice = null,
         public ?int $maxPrice = null,
         public ?array $attributeFilters = null,
+        public ?string $storeId = null,
         public ?string $sortBy = null,
         public string $sortDirection = 'asc',
         public int $perPage = 15,

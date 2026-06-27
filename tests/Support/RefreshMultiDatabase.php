@@ -34,6 +34,12 @@ trait RefreshMultiDatabase
                 '--force' => true,
             ]);
 
+            $this->artisan('migrate', [
+                '--database' => 'central',
+                '--path' => 'database/migrations/central',
+                '--force' => true,
+            ]);
+
             $this->app[Kernel::class]->setArtisan(null);
 
             static::$migratedCentral = true;
@@ -68,6 +74,12 @@ trait RefreshMultiDatabase
                 '--force' => true,
                 '--database' => 'shared',
                 '--path' => 'database/migrations/shared',
+            ]);
+
+            Artisan::call('migrate', [
+                '--force' => true,
+                '--database' => 'shared',
+                '--path' => 'app/Modules/Store/Database/Migrations/Tenant',
             ]);
 
             static::$migratedShared = true;

@@ -1,19 +1,12 @@
 ---
 name: wayfinder-development
-description: "Activates whenever referencing backend routes in frontend components. Use when importing from @/actions or @/routes, calling Laravel routes from TypeScript, or working with Wayfinder route functions."
+description: "Use this skill for Laravel Wayfinder which auto-generates typed functions for Laravel controllers and routes. ALWAYS use this skill when frontend code needs to call backend routes or controller actions. Trigger when: connecting any React/Vue/Svelte/Inertia frontend to Laravel controllers, routes, building end-to-end features with both frontend and backend, wiring up forms or links to backend endpoints, fixing route-related TypeScript errors, importing from @/actions or @/routes, or running wayfinder:generate. Use Wayfinder route functions instead of hardcoded URLs. Covers: wayfinder() vite plugin, .url()/.get()/.post()/.form(), query params, route model binding, tree-shaking. Do not use for backend-only task"
 license: MIT
 metadata:
   author: laravel
 ---
 
 # Wayfinder Development
-
-## When to Apply
-
-Activate whenever referencing backend routes in frontend components:
-- Importing from `@/actions/` or `@/routes/`
-- Calling Laravel routes from TypeScript/JavaScript
-- Creating links or navigation to backend endpoints
 
 ## Documentation
 
@@ -80,51 +73,8 @@ Use Wayfinder with the `<Form>` component:
 2. Check TypeScript imports resolve correctly
 3. Verify route URLs match expected paths
 
-## Project-Specific Patterns (Souda)
-
-This project uses **Wayfinder v0** with the `@laravel/vite-plugin-wayfinder` Vite plugin. Routes auto-regenerate on save — manual `wayfinder:generate` is not needed during development.
-
-### Import Paths
-
-Generated files are in `resources/js/wayfinder/`. The vite plugin maps:
-- `@/actions/` → `resources/js/wayfinder/actions/`
-- `@/routes/` → `resources/js/wayfinder/routes/`
-
-### Invokable Controllers
-
-```typescript
-import StorePost from '@/actions/App/Http/Controllers/StorePostController';
-
-// POST /posts — calls the invokable controller
-router.post(StorePost(), formData);
-```
-
-### Named Routes
-
-```typescript
-import { show } from '@/routes/post';
-
-// GET /posts/{post:slug}
-router.get(show({ slug: 'my-post' }));
-
-// With query merging (Inertia)
-import { mergeQuery } from '@/lib/wayfinder';
-show(1, { mergeQuery: mergeQuery({ page: 2, sort: null }) });
-```
-
-### Wayfinder + Inertia `<Form>` Component
-
-```typescript
-import { store } from '@/actions/App/Http/Controllers/TaskController';
-
-<Form {...store.form()}>
-    <input name="title" />
-</Form>
-```
-
 ## Common Pitfalls
 
 - Using default imports instead of named imports (breaks tree-shaking)
-- Forgetting Vite plugin auto-generates; no need to run `wayfinder:generate` manually
+- Forgetting to regenerate after route changes
 - Not using type-safe parameter objects for route model binding
-- Using hardcoded URLs instead of Wayfinder functions

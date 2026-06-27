@@ -21,7 +21,7 @@ class CreateNewUser implements CreatesNewUsers
         // In multi-DB mode, creating a Tenant automatically triggers database
         // creation and migration via the TenantCreated event listener.
         return Tenant::create([
-            'name' => "{$name}'s Account",
+            'name' => $name,
         ]);
     }
 
@@ -37,13 +37,15 @@ class CreateNewUser implements CreatesNewUsers
         Validator::make($input, [
             ...$this->profileRules(),
             'password' => $this->passwordRules(),
+            'business_name' => ['sometimes', 'string', 'max:255'],
             'business_type_slug' => ['sometimes', 'string', 'exists:business_types,slug'],
         ])->validate();
 
         // Note: No DB::transaction() wrapper here because Tenant creation
         // triggers DDL (CREATE DATABASE) in multi-DB mode, which auto-commits
         // any open MySQL transaction, making the outer transaction ineffective.
-        $tenant = $this->createTenantWithDefaults($input['name']);
+        $tenantName = $input['business_name'] ?? "{$input['name']}'s Account";
+        $tenant = $this->createTenantWithDefaults($tenantName);
 
         $user = new User([
             'name' => $input['name'],
@@ -53,6 +55,11 @@ class CreateNewUser implements CreatesNewUsers
 
         $user->tenant_id = $tenant->id;
         $user->save();
+
+        $user->tenants()->attach($tenant->id, [
+            'role' => 'owner',
+            'is_default' => true,
+        ]);
 
         $tenant->update(['owner_id' => $user->id]);
 

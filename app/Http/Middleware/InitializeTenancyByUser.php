@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Middleware;
 
+use App\Models\Tenant;
 use App\Tenancy\TenantManager;
 use Closure;
 use Illuminate\Http\Request;
@@ -25,18 +26,30 @@ class InitializeTenancyByUser
 
         $user = $request->user();
 
-        if (! $user?->tenant_id) {
-            if ($user) {
-                abort(403, 'Tenant context could not be established.');
-            }
-
+        if (! $user) {
             return $next($request);
         }
 
-        $tenant = $user->tenant;
+        // Resolve tenant: session first (tenant switcher), then user.tenant_id (legacy)
+        $tenantId = $request->session()->get('active_tenant_id', $user->tenant_id);
+
+        if (! $tenantId) {
+            abort(403, 'Tenant context could not be established.');
+        }
+
+        $tenant = Tenant::query()->find($tenantId);
 
         if (! $tenant) {
             abort(403, 'Tenant not found. Your account may have been deactivated.');
+        }
+
+        // Verify user belongs to this tenant
+        // Checks both the legacy direct tenant_id and the new pivot table
+        $hasAccess = $user->tenant_id === $tenantId
+            || $user->tenants()->where('tenant_id', $tenantId)->exists();
+
+        if (! $hasAccess) {
+            abort(403, 'You do not have access to this tenant.');
         }
 
         $manager = app(TenantManager::class);

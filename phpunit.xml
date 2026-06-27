@@ -28,13 +28,13 @@
         <env name="DB_PORT" value="3306"/>
         <env name="DB_DATABASE" value="souda_testing"/>
         <env name="DB_USERNAME" value="root"/>
-        <env name="DB_PASSWORD" value=""/>
+        <env name="DB_PASSWORD" value="pass"/>
         <env name="CENTRAL_DB_CONNECTION" value="central"/>
         <env name="CENTRAL_DB_HOST" value="127.0.0.1"/>
         <env name="CENTRAL_DB_PORT" value="3306"/>
         <env name="CENTRAL_DB_DATABASE" value="souda_testing"/>
         <env name="CENTRAL_DB_USERNAME" value="root"/>
-        <env name="CENTRAL_DB_PASSWORD" value=""/>
+        <env name="CENTRAL_DB_PASSWORD" value="pass"/>
         <env name="TENANT_DB_CONNECTION_TEMPLATE" value="mysql"/>
         <env name="TENANT_DB_PREFIX" value="souda_tenant_"/>
         <env name="MAIL_MAILER" value="array"/>

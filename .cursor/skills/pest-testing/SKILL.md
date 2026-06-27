@@ -1,22 +1,12 @@
 ---
 name: pest-testing
-description: "Tests applications using the Pest 4 PHP framework. Activates when writing tests, creating unit or feature tests, adding assertions, testing Livewire components, browser testing, debugging test failures, working with datasets or mocking; or when the user mentions test, spec, TDD, expects, assertion, coverage, or needs to verify functionality works."
+description: "Use this skill for Pest PHP testing in Laravel projects only. Trigger whenever any test is being written, edited, fixed, or refactored — including fixing tests that broke after a code change, adding assertions, converting PHPUnit to Pest, adding datasets, and TDD workflows. Always activate when the user asks how to write something in Pest, mentions test files or directories (tests/Feature, tests/Unit, tests/Browser), or needs browser testing, smoke testing multiple pages for JS errors, or architecture tests. Covers: test()/it()/expect() syntax, datasets, mocking, browser testing (visit/click/fill), smoke testing, arch(), Livewire component tests, RefreshDatabase, and all Pest 4 features. Do not use for factories, seeders, migrations, controllers, models, or non-test PHP code."
 license: MIT
 metadata:
   author: laravel
 ---
 
 # Pest Testing 4
-
-## When to Apply
-
-Activate this skill when:
-
-- Creating new tests (unit, feature, or browser)
-- Modifying existing tests
-- Debugging test failures
-- Working with browser testing or smoke testing
-- Writing architecture tests or visual regression tests
 
 ## Documentation
 
@@ -28,6 +18,12 @@ Use `search-docs` for detailed Pest 4 patterns and documentation.
 
 All tests must be written using Pest. Use `php artisan make:test --pest {name}`.
 
+The `{name}` argument should include only the path and test name, but should not include the test suite.
+- Incorrect: `php artisan make:test --pest Feature/SomeFeatureTest` will generate `tests/Feature/Feature/SomeFeatureTest.php`
+- Correct: `php artisan make:test --pest SomeControllerTest` will generate `tests/Feature/SomeControllerTest.php`
+- Incorrect: `php artisan make:test --pest --unit Unit/SomeServiceTest` will generate `tests/Unit/Unit/SomeServiceTest.php`
+- Correct: `php artisan make:test --pest --unit SomeServiceTest` will generate `tests/Unit/SomeServiceTest.php`
+
 ### Test Organization
 
 - Unit/Feature tests: `tests/Feature` and `tests/Unit` directories.
@@ -35,6 +31,8 @@ All tests must be written using Pest. Use `php artisan make:test --pest {name}`.
 - Do NOT remove tests without approval - these are core application code.
 
 ### Basic Test Structure
+
+Pest supports both `test()` and `it()` functions. Before writing new tests, check existing test files in the same directory to match the project's convention. Use `test()` if existing tests use `test()`, or `it()` if they use `it()`.
 
 <!-- Basic Pest Test Example -->
 ```php
@@ -158,62 +156,6 @@ arch('controllers')
     ->toHaveSuffix('Controller');
 ```
 
-## Project-Specific Patterns (Souda)
-
-### Tenancy Testing
-
-This project uses `RefreshMultiDatabase` trait (in `tests/Support/`). Apply to feature test files:
-
-```php
-uses(RefreshMultiDatabase::class);
-```
-
-**User factory with tenant + subscription:**
-```php
-$user = User::factory()->withSubscription()->create();
-$this->actingAs($user);
-```
-
-**Cross-tenant isolation pattern:**
-```php
-$user = User::factory()->withSubscription()->create();
-$otherUser = User::factory()->withSubscription()->create();
-
-tenancy()->initialize($otherUser->tenant);
-$task = Task::factory()->create();
-tenancy()->end();
-
-$this->actingAs($user)
-    ->get(route('tasks.show', $task))
-    ->assertForbidden();
-```
-
-**Billing tests** — billing models use `CentralConnection`, query outside tenant context:
-```php
-$plan = Plan::factory()->create(['monthly_price' => 0]);
-$subscription = SubscriptionService::createSubscription($user->tenant, $plan, 'free', 'monthly');
-expect($subscription->status)->toBe(SubscriptionStatus::Active);
-```
-
-### HasTenantScope Safety
-
-The `HasTenantScope` trait wraps `app()` calls in try-catch for test safety. `TestCase::setUp()` resets `Model::$booting` via reflection. Do NOT remove these guards.
-
-### Useful Factories
-
-- `User::factory()->withSubscription()->create()` — user + tenant + active subscription
-- `Tenant::factory()->create(['tenancy_mode' => 'dedicated'])` — dedicated-mode tenant
-- `Plan::factory()` — billing plan
-- `Task::factory()` — tenant-scoped task
-
-### Command Tests
-
-```php
-$this->artisan('subscription:expire-expired --dry-run')
-    ->expectsOutputToContain('DRY RUN')
-    ->assertExitCode(0);
-```
-
 ## Common Pitfalls
 
 - Not importing `use function Pest\Laravel\mock;` before using mock
@@ -221,6 +163,4 @@ $this->artisan('subscription:expire-expired --dry-run')
 - Forgetting datasets for repetitive validation tests
 - Deleting tests without approval
 - Forgetting `assertNoJavaScriptErrors()` in browser tests
-- Not using `RefreshMultiDatabase` for tenant tests
-- Forgetting `afterEach` tenant cleanup: `$tenant->delete(); $tenant->forceDelete();`
-- Not clearing `Model::$booting` state across test classes
+- Prefixing `Feature/` or `Unit/` in `{name}` when using `make:test`

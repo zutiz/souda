@@ -82,11 +82,13 @@ This file is for AI coding agents. It defines exact conventions, patterns, guard
 
 ### Database Connections
 
-| Name | Database | Purpose | Models use |
-|---|---|---|---|
-| `central` | `souda` | Users, tenants, billing, business types, roles | `CentralConnection` trait |
-| `shared` | `souda_shared` | Shared-mode tenant data | `HasTenantScope` trait |
-| `mysql` | (template) | Template for dedicated tenant DBs | Normal Eloquent |
+| Name | Database (prod) | Database (test) | Purpose | Models use |
+|---|---|---|---|---|
+| `central` | `souda` | `souda_testing` | Users, tenants, billing, business types, roles | `CentralConnection` trait |
+| `shared` | `souda_shared` | `souda_shared` | Shared-mode tenant data (stores, settings, tasks, configs) | `HasTenantScope` trait |
+| `mysql` | `souda` | `souda_testing` | Default / template for dedicated tenant DBs | Normal Eloquent |
+
+In tests, `central` and `mysql` both point to `souda_testing`, so test processes must run sequentially — parallel migrations collide.
 
 ### Tenancy Modes
 
@@ -178,7 +180,7 @@ Adds `WHERE tenant_id = ?` in shared mode. Provides `withoutTenancy()` macro.
 
 ### InitializeTenancyByUser Middleware
 
-Gets tenant from `$request->user()->tenant`, calls `TenantManager::initialize()`. Runs before `SubstituteBindings`.
+Resolves tenant via 3-tier fallback: (1) session `current_tenant_id` → check access, (2) `$user->tenants()` pivot query with try-catch, (3) `$user->tenant` legacy BelongsTo. Access check order: direct `$user->tenant_id` match first (no pivot query), then `tenants()` pivot. Runs before `SubstituteBindings`. Applied to all tenant routes and settings routes.
 
 ---
 
@@ -257,6 +259,18 @@ interface TenantTemplate
 
 All 16 templates in `app/Modules/Onboarding/Templates/`, registered in `OnboardingServiceProvider::boot()`.
 
+### ProvisioningContext (`app/Modules/Onboarding/Data/ProvisioningContext.php`)
+
+```php
+public function __construct(
+    public Tenant $tenant,
+    public string $businessTypeSlug,  // required — used to look up TenantTemplate
+    public array $planData = [],
+) {}
+```
+
+Class is NOT readonly (was changed from `readonly class` for PHP 8.4 compatibility). Has `setCurrentStep()` method.
+
 ### ProvisioningStep Contract (`app/Modules/Onboarding/Contracts/ProvisioningStep.php`)
 
 ```php
@@ -268,7 +282,7 @@ interface ProvisioningStep
 }
 ```
 
-### 10 Pipeline Steps (in `app/Modules/Onboarding/Services/`)
+### 11 Pipeline Steps (in `app/Modules/Onboarding/Services/`)
 
 | Step | Label | What It Does |
 |---|---|---|
@@ -281,6 +295,7 @@ interface ProvisioningStep
 | `ConfigureDashboardStep` | Setting up dashboard | Adds industry-specific widget layout |
 | `ConfigurePOSStep` | Configuring POS | Sets POS defaults per industry |
 | `CreateDefaultTeamStep` | Setting up team | Creates default team roles |
+| `CreateDefaultStoreStep` | Creating default store | Creates first store from `TenantTemplate::defaultStores()` via `StoreService::createStore()` |
 | `BuildTenantConfigStep` | Building config | Builds + caches TenantConfig |
 
 ### Onboarding Events (in `app/Modules/Onboarding/Events/`)
@@ -395,11 +410,18 @@ All implement `BillingGatewayInterface`. Drivers: sslcommerz (✅), stripe (❌ 
 ### Inertia Shared Data (`HandleInertiaRequests`)
 
 ```php
+'currentTenant' => fn () => resolveCurrentTenant(),  // shared with logo, business_type_id
+'tenants'       => fn () => $user->tenants,           // for tenant switcher
+'currentStore'  => fn () => resolveCurrentStore(),    // shared with all store fields
+'stores'        => fn () => $user->stores,            // for store switcher
+'businessTypes' => fn () => BusinessType::all(),     // lazy prop for dropdowns
 'tenant_config' => fn () => [
     'business_type' => $config->businessType,
     'modules'       => $config->enabledModules,
 ],
 ```
+
+`resolveCurrentTenant()` has 3-tier fallback: `TenantManager->initialized()` → `$user->tenants()` pivot (try-catch) → `$user->tenant` legacy BelongsTo.
 
 ### Hooks (`resources/js/hooks/use-tenant-config.ts`)
 
@@ -912,7 +934,7 @@ DB::table('tenant_settings')
 ### Service Provider Boot Order (`bootstrap/providers.php`)
 
 ```php
-AppServiceProvider::class,
+AppServiceProvider::class,         // loadMigrationsFrom('database/migrations/central')
 FortifyServiceProvider::class,     // Auth actions, Inertia views
 ProductServiceProvider::class,     // Products, observers, policies
 TenancyServiceProvider::class,     // TenantManager, middleware
@@ -920,6 +942,8 @@ BillingServiceProvider::class,     // Billing services, gateways
 IndustryServiceProvider::class,    // Industry packs, TenantConfig
 OnboardingServiceProvider::class,  // TenantTemplates, ProvisioningPipeline
 ```
+
+`AppServiceProvider::boot()` calls `loadMigrationsFrom(database_path('migrations/central'))` so the `tenant_user` pivot table migration and other central migrations are available in all environments (including test).
 
 IndustryServiceProvider runs last among core providers. OnboardingServiceProvider runs last overall.
 
@@ -951,6 +975,10 @@ app(BusinessTypeEngine::class)->invalidateConfig($tenant);
 ### $0 Payment Auto-Activation
 
 Free plan (`$amount === 0`) activates immediately in `SubscriptionService::createSubscription()` without going through payment gateway. This was added as a fix — the subscription goes directly to `Active` and dispatches `SubscriptionActivated`.
+
+### Test DB Is `souda_testing` — Central + Default Share It
+
+In `phpunit.xml`, both `DB_DATABASE` and `CENTRAL_DB_DATABASE` are set to `souda_testing`. The `central` and `default` (`mysql`) connections both target the same MySQL database. **Do not run tests in parallel** — each `php artisan test` command must complete before the next starts, or `migrate:fresh` calls will collide and corrupt the DB.
 
 ### HasTenantScope Must Be Test-Safe
 
@@ -1093,11 +1121,16 @@ social_accounts         — user_id, provider, provider_user_id
 ### Shared (`souda_shared`) — Key Tables
 
 ```
+stores                  — id (ULID), tenant_id, name, slug, code, timezone, currency, status, is_default, ...
 tenant_settings         — id, tenant_id, timezone, locale, currency, logo, ...
 tasks                   — id, tenant_id, title, description, is_completed
 tenant_configs          — id, tenant_id, business_type_slug, config (JSON), config_hash
 tenant_module_overrides — id, tenant_id, module_slug, is_enabled, settings (JSON)
 ```
+
+Shared DB migration paths in `tests/Support/RefreshMultiDatabase.php`:
+- `database/migrations/shared/` — settings, product tables, business type tables
+- `app/Modules/Store/Database/Migrations/Tenant/` — stores table (module tenant migration run against shared DB)
 
 ### Dedicated (per-tenant) — Key Tables
 
@@ -1127,5 +1160,7 @@ Progress schema: array of `{step, status, index, timestamp}` objects.
 | `routes/admin.php` | `/admin` | web, auth, EnsureAdmin |
 | `routes/tenant.php` | (none) | web, auth, InitializeTenancyByUser, subscription |
 | `routes/onboarding.php` | (none) | web |
-| `routes/settings.php` | (included) | auth |
+| `routes/settings.php` | (included) | auth, InitializeTenancyByUser |
 | `routes/console.php` | -- | -- |
+
+Settings routes include `InitializeTenancyByUser` so `currentTenant`/`currentStore` are available on profile pages.

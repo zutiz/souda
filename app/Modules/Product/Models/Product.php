@@ -10,6 +10,7 @@ use App\Modules\Product\Enums\ProductTypeEnum;
 use App\Modules\Product\Traits\HasProductMedia;
 use App\Modules\Product\Traits\HasProductStock;
 use App\Modules\Product\Traits\Sluggable;
+use App\Modules\Store\Models\Store;
 use App\Tenancy\Models\Concerns\HasTenantScope;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -119,6 +120,30 @@ class Product extends Model
     public function stockMovements(): HasMany
     {
         return $this->hasMany(StockMovement::class);
+    }
+
+    public function stores(): BelongsToMany
+    {
+        return $this->belongsToMany(Store::class, 'store_product')
+            ->withPivot([
+                'price', 'compare_at_price',
+                'is_visible', 'is_featured',
+                'status', 'sort_order',
+            ])
+            ->withTimestamps();
+    }
+
+    public function scopeForStore($query, string $storeId)
+    {
+        return $query->whereHas('stores', fn ($q) => $q->where('store_product.store_id', $storeId)
+        );
+    }
+
+    public function scopeVisibleInStore($query, string $storeId)
+    {
+        return $query->whereHas('stores', fn ($q) => $q->where('store_product.store_id', $storeId)
+            ->where('store_product.is_visible', true)
+        );
     }
 
     public function pricingRules(): HasMany

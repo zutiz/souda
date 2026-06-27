@@ -159,4 +159,19 @@ class BookstoreTemplate implements TenantTemplate
     {
         return [];
     }
+
+    public function defaultStores(): array
+    {
+        return [
+            [
+                'name' => 'Main Store',
+                'slug' => 'main',
+                'code' => 'STORE-001',
+                'currency' => 'XOF',
+                'timezone' => 'Africa/Porto-Novo',
+                'is_default' => true,
+                'status' => 'active',
+            ],
+        ];
+    }
 }

@@ -21,6 +21,11 @@ class RolePermissionSeeder extends Seeder
             'products.duplicate',
             'products.import',
             'products.export',
+            'stores.view',
+            'stores.create',
+            'stores.update',
+            'stores.delete',
+            'stores.switch',
         ];
 
         $guard = 'web';

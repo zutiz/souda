@@ -6,7 +6,7 @@ namespace App\Modules\Onboarding\Data;
 
 use App\Models\Tenant;
 
-readonly class ProvisioningContext
+class ProvisioningContext
 {
     public string $currentStep = '';
 

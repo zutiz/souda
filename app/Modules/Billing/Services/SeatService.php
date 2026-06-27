@@ -130,6 +130,16 @@ class SeatService
             'invitation_token' => null,
         ]);
 
+        $user = User::query()->find($userId);
+
+        if ($user !== null && $user->tenant_id === null) {
+            $user->update(['tenant_id' => $tenantId]);
+        }
+
+        $user?->tenants()->syncWithoutDetaching([
+            $tenantId => ['role' => $allocation->seat_type->value, 'is_default' => false],
+        ]);
+
         return $allocation;
     }
 

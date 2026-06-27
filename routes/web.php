@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Auth\SocialAuthController;
 use App\Http\Controllers\BillingController;
+use App\Http\Controllers\TenantSwitcherController;
 use App\Http\Controllers\WelcomeController;
 use Illuminate\Support\Facades\Route;
 
@@ -20,6 +21,11 @@ Route::middleware(['web', 'auth'])->group(function () {
     Route::post('/billing/cancel', [BillingController::class, 'cancel'])->name('billing.cancel');
     Route::get('/billing/invoices', [BillingController::class, 'invoices'])->name('billing.invoices');
     Route::get('/billing/callback/{gateway}', [BillingController::class, 'callback'])->name('billing.callback');
+
+    // Tenant switching — must be before tenancy initialization
+    Route::post('/tenant/switch', [TenantSwitcherController::class, 'switch'])->name('tenant.switch');
+    Route::get('/tenant/create', [TenantSwitcherController::class, 'create'])->name('tenant.create');
+    Route::post('/tenant', [TenantSwitcherController::class, 'store'])->name('tenant.store');
 });
 
 require __DIR__.'/settings.php';

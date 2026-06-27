@@ -6,7 +6,10 @@ import { defineConfig } from 'vite';
 
 export default defineConfig({
     server: {
-        host: 'souda.test',
+        host: '0.0.0.0',
+        hmr: {
+            host: 'souda.test',
+        },
     },
     plugins: [
         laravel({
