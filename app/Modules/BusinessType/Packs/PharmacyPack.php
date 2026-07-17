@@ -253,6 +253,12 @@ class PharmacyPack implements IndustryPack
             'prescription_management',
             'drug_schedule_management',
             'insurance_billing',
+            'fefo_picking',
+            'quarantine_management',
+            'low_stock_alerts',
+            'stock_transfers',
+            'cycle_counting',
+            'dead_stock_detection',
         ];
     }
 

@@ -101,7 +101,16 @@ class DistributionPack implements IndustryPack
 
     public function featureFlags(): array
     {
-        return ['delivery_tracking', 'warehouse_transfers', 'route_planning'];
+        return [
+            'delivery_tracking',
+            'route_planning',
+            'stock_transfers',
+            'batch_tracking',
+            'low_stock_alerts',
+            'cycle_counting',
+            'dead_stock_detection',
+            'overstock_detection',
+        ];
     }
 
     public function onTenantAssigned(Tenant $tenant): void {}

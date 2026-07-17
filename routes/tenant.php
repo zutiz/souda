@@ -6,6 +6,20 @@ use App\Http\Controllers\BillingController;
 use App\Http\Controllers\TaskController;
 use App\Http\Controllers\TeamController;
 use App\Http\Middleware\InitializeTenancyByUser;
+use App\Modules\Inventory\Http\Controllers\AlertController;
+use App\Modules\Inventory\Http\Controllers\BatchController;
+use App\Modules\Inventory\Http\Controllers\CountController;
+use App\Modules\Inventory\Http\Controllers\DashboardExportController;
+use App\Modules\Inventory\Http\Controllers\ForecastController;
+use App\Modules\Inventory\Http\Controllers\InventoryController;
+use App\Modules\Inventory\Http\Controllers\OperationsController;
+use App\Modules\Inventory\Http\Controllers\ReservationController;
+use App\Modules\Inventory\Http\Controllers\RuleController;
+use App\Modules\Inventory\Http\Controllers\SerialNumberController;
+use App\Modules\Inventory\Http\Controllers\StockClassificationController;
+use App\Modules\Inventory\Http\Controllers\SuggestionController;
+use App\Modules\Inventory\Http\Controllers\TransferController;
+use App\Modules\Inventory\Http\Controllers\WarehouseController;
 use App\Modules\Product\Http\Controllers\AttributeController;
 use App\Modules\Product\Http\Controllers\BrandController;
 use App\Modules\Product\Http\Controllers\CategoryController;
@@ -86,6 +100,97 @@ Route::middleware(['web', 'auth', InitializeTenancyByUser::class])->group(functi
 
         Route::resource('products', ProductController::class)
             ->only(['index', 'create', 'store', 'show', 'edit', 'update', 'destroy']);
+
+        // === Inventory Module ===
+        Route::prefix('inventory')->name('inventory.')->group(function () {
+            Route::get('/', [InventoryController::class, 'dashboard'])->name('dashboard');
+            Route::get('/balances', [InventoryController::class, 'index'])->name('index');
+            Route::get('/movements', [InventoryController::class, 'movements'])->name('movements');
+
+            // Warehouses
+            Route::get('/warehouses', [WarehouseController::class, 'index'])->name('warehouses.index');
+            Route::post('/warehouses', [WarehouseController::class, 'store'])->name('warehouses.store');
+            Route::get('/warehouses/{warehouse}', [WarehouseController::class, 'show'])->name('warehouses.show');
+            Route::put('/warehouses/{warehouse}', [WarehouseController::class, 'update'])->name('warehouses.update');
+            Route::delete('/warehouses/{warehouse}', [WarehouseController::class, 'destroy'])->name('warehouses.destroy');
+
+            // Transfers
+            Route::get('/transfers', [TransferController::class, 'index'])->name('transfers.index');
+            Route::get('/transfers/create', [TransferController::class, 'create'])->name('transfers.create');
+            Route::post('/transfers', [TransferController::class, 'store'])->name('transfers.store');
+            Route::get('/transfers/{transfer}', [TransferController::class, 'show'])->name('transfers.show');
+            Route::post('/transfers/{transfer}/send', [TransferController::class, 'send'])->name('transfers.send');
+            Route::post('/transfers/{transfer}/receive', [TransferController::class, 'receive'])->name('transfers.receive');
+            Route::post('/transfers/{transfer}/cancel', [TransferController::class, 'cancel'])->name('transfers.cancel');
+
+            // Alerts
+            Route::get('/alerts', [AlertController::class, 'index'])->name('alerts');
+            Route::post('/alerts/{alert}/dismiss', [AlertController::class, 'dismiss'])->name('alerts.dismiss');
+            Route::post('/alerts/{alert}/resolve', [AlertController::class, 'resolve'])->name('alerts.resolve');
+
+            // Stock Classification
+            Route::get('/classification', [StockClassificationController::class, 'index'])->name('classification.index');
+            Route::post('/classification/refresh', [StockClassificationController::class, 'refresh'])->name('classification.refresh');
+
+            // Demand Forecasts
+            Route::get('/forecasts', [ForecastController::class, 'index'])->name('forecasts.index');
+            Route::get('/forecasts/{forecast}', [ForecastController::class, 'show'])->name('forecasts.show');
+            Route::post('/forecasts/generate', [ForecastController::class, 'generate'])->name('forecasts.generate');
+            Route::post('/forecasts/resolve', [ForecastController::class, 'resolve'])->name('forecasts.resolve');
+
+            // Automation Rules
+            Route::get('/rules', [RuleController::class, 'index'])->name('rules.index');
+            Route::get('/rules/create', [RuleController::class, 'create'])->name('rules.create');
+            Route::post('/rules', [RuleController::class, 'store'])->name('rules.store');
+            Route::get('/rules/{rule}', [RuleController::class, 'show'])->name('rules.show');
+            Route::put('/rules/{rule}', [RuleController::class, 'update'])->name('rules.update');
+            Route::post('/rules/{rule}/toggle', [RuleController::class, 'toggle'])->name('rules.toggle');
+            Route::post('/rules/{rule}/evaluate', [RuleController::class, 'evaluate'])->name('rules.evaluate');
+            Route::delete('/rules/{rule}', [RuleController::class, 'destroy'])->name('rules.destroy');
+
+            // Physical Counts / Cycle Counting
+            Route::get('/counts', [CountController::class, 'index'])->name('counts.index');
+            Route::get('/counts/create', [CountController::class, 'create'])->name('counts.create');
+            Route::post('/counts', [CountController::class, 'store'])->name('counts.store');
+            Route::get('/counts/{count}', [CountController::class, 'show'])->name('counts.show');
+            Route::post('/counts/{count}/record', [CountController::class, 'recordCounts'])->name('counts.record');
+            Route::post('/counts/{count}/verify', [CountController::class, 'verify'])->name('counts.verify');
+            Route::post('/counts/{count}/apply', [CountController::class, 'applyAdjustments'])->name('counts.apply');
+            Route::post('/counts/{count}/complete', [CountController::class, 'complete'])->name('counts.complete');
+            Route::post('/counts/{count}/cancel', [CountController::class, 'cancel'])->name('counts.cancel');
+
+            // Purchase Suggestions
+            Route::get('/suggestions', [SuggestionController::class, 'index'])->name('suggestions.index');
+            Route::put('/suggestions/{suggestion}', [SuggestionController::class, 'update'])->name('suggestions.update');
+            Route::post('/suggestions/generate', [SuggestionController::class, 'generate'])->name('suggestions.generate');
+
+            // Dashboard Export
+            Route::get('/dashboard/export/csv', [DashboardExportController::class, 'csv'])->name('dashboard.export.csv');
+
+            // Batches
+            Route::get('/batches', [BatchController::class, 'index'])->name('batches.index');
+            Route::post('/batches', [BatchController::class, 'store'])->name('batches.store');
+            Route::get('/batches/{batch}', [BatchController::class, 'show'])->name('batches.show');
+            Route::post('/batches/{batch}/deduct', [BatchController::class, 'deduct'])->name('batches.deduct');
+            Route::post('/batches/{batch}/quarantine', [BatchController::class, 'quarantine'])->name('batches.quarantine');
+
+            // Serial Numbers
+            Route::get('/serials', [SerialNumberController::class, 'index'])->name('serials.index');
+            Route::post('/serials', [SerialNumberController::class, 'store'])->name('serials.store');
+            Route::post('/serials/batch', [SerialNumberController::class, 'storeBatch'])->name('serials.store-batch');
+            Route::get('/serials/{serial}', [SerialNumberController::class, 'show'])->name('serials.show');
+            Route::post('/serials/{serial}/sold', [SerialNumberController::class, 'markSold'])->name('serials.mark-sold');
+            Route::post('/serials/{serial}/return', [SerialNumberController::class, 'markReturned'])->name('serials.mark-returned');
+
+            // Reservations
+            Route::get('/reservations', [ReservationController::class, 'index'])->name('reservations.index');
+            Route::get('/reservations/{reservation}', [ReservationController::class, 'show'])->name('reservations.show');
+            Route::post('/reservations/{reservation}/cancel', [ReservationController::class, 'cancel'])->name('reservations.cancel');
+
+            // Operations / Schedule Monitor
+            Route::get('/operations', [OperationsController::class, 'index'])->name('operations');
+            Route::post('/operations/{command}/run', [OperationsController::class, 'run'])->name('operations.run');
+        });
 
         Route::get('/team', [TeamController::class, 'index'])->name('team.index');
         Route::post('/team/invite', [TeamController::class, 'invite'])->name('team.invite')->middleware('seat');

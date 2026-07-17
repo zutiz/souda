@@ -241,6 +241,13 @@ class RestaurantPack implements IndustryPack
             'online_ordering',
             'delivery_tracking',
             'reservation_management',
+            'recipe_consumption',
+            'waste_tracking',
+            'expiry_tracking',
+            'batch_tracking',
+            'low_stock_alerts',
+            'stock_transfers',
+            'cycle_counting',
         ];
     }
 

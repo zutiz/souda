@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 use App\Models\Permission;
 use App\Models\Tenant;
+use App\Modules\Billing\Enums\BillingCycle;
+use App\Modules\Billing\Enums\SubscriptionStatus;
 use App\Modules\Billing\Models\Plan;
 use App\Modules\Billing\Services\StoreBillingService;
 use App\Modules\Store\Models\Store;
@@ -26,8 +28,8 @@ test('can create store returns true when under plan limit', function () {
         ->afterCreating(fn (Tenant $t) => $t->subscriptions()->create([
             'plan_id' => $plan->id,
             'gateway' => 'manual',
-            'status' => App\Modules\Billing\Enums\SubscriptionStatus::Active,
-            'billing_cycle' => App\Modules\Billing\Enums\BillingCycle::Monthly,
+            'status' => SubscriptionStatus::Active,
+            'billing_cycle' => BillingCycle::Monthly,
             'amount' => $plan->monthly_price,
             'currency' => $plan->currency,
             'starts_at' => now(),
@@ -54,8 +56,8 @@ test('can create store returns false when at plan limit', function () {
         ->afterCreating(fn (Tenant $t) => $t->subscriptions()->create([
             'plan_id' => $plan->id,
             'gateway' => 'manual',
-            'status' => App\Modules\Billing\Enums\SubscriptionStatus::Active,
-            'billing_cycle' => App\Modules\Billing\Enums\BillingCycle::Monthly,
+            'status' => SubscriptionStatus::Active,
+            'billing_cycle' => BillingCycle::Monthly,
             'amount' => $plan->monthly_price,
             'currency' => $plan->currency,
             'starts_at' => now(),
@@ -84,8 +86,8 @@ test('remaining stores returns correct count', function () {
         ->afterCreating(fn (Tenant $t) => $t->subscriptions()->create([
             'plan_id' => $plan->id,
             'gateway' => 'manual',
-            'status' => App\Modules\Billing\Enums\SubscriptionStatus::Active,
-            'billing_cycle' => App\Modules\Billing\Enums\BillingCycle::Monthly,
+            'status' => SubscriptionStatus::Active,
+            'billing_cycle' => BillingCycle::Monthly,
             'amount' => $plan->monthly_price,
             'currency' => $plan->currency,
             'starts_at' => now(),
@@ -113,8 +115,8 @@ test('calculate store amount returns correct values', function () {
         ->afterCreating(fn (Tenant $t) => $t->subscriptions()->create([
             'plan_id' => $plan->id,
             'gateway' => 'manual',
-            'status' => App\Modules\Billing\Enums\SubscriptionStatus::Active,
-            'billing_cycle' => App\Modules\Billing\Enums\BillingCycle::Monthly,
+            'status' => SubscriptionStatus::Active,
+            'billing_cycle' => BillingCycle::Monthly,
             'amount' => $plan->monthly_price,
             'currency' => $plan->currency,
             'starts_at' => now(),
@@ -154,8 +156,8 @@ test('allocate store creates allocation when over plan limit', function () {
         ->afterCreating(fn (Tenant $t) => $t->subscriptions()->create([
             'plan_id' => $plan->id,
             'gateway' => 'manual',
-            'status' => App\Modules\Billing\Enums\SubscriptionStatus::Active,
-            'billing_cycle' => App\Modules\Billing\Enums\BillingCycle::Monthly,
+            'status' => SubscriptionStatus::Active,
+            'billing_cycle' => BillingCycle::Monthly,
             'amount' => $plan->monthly_price,
             'currency' => $plan->currency,
             'starts_at' => now(),
@@ -191,8 +193,8 @@ test('allocate store returns null when within plan limit', function () {
         ->afterCreating(fn (Tenant $t) => $t->subscriptions()->create([
             'plan_id' => $plan->id,
             'gateway' => 'manual',
-            'status' => App\Modules\Billing\Enums\SubscriptionStatus::Active,
-            'billing_cycle' => App\Modules\Billing\Enums\BillingCycle::Monthly,
+            'status' => SubscriptionStatus::Active,
+            'billing_cycle' => BillingCycle::Monthly,
             'amount' => $plan->monthly_price,
             'currency' => $plan->currency,
             'starts_at' => now(),
@@ -223,8 +225,8 @@ test('release store marks allocation as released', function () {
         ->afterCreating(fn (Tenant $t) => $t->subscriptions()->create([
             'plan_id' => $plan->id,
             'gateway' => 'manual',
-            'status' => App\Modules\Billing\Enums\SubscriptionStatus::Active,
-            'billing_cycle' => App\Modules\Billing\Enums\BillingCycle::Monthly,
+            'status' => SubscriptionStatus::Active,
+            'billing_cycle' => BillingCycle::Monthly,
             'amount' => $plan->monthly_price,
             'currency' => $plan->currency,
             'starts_at' => now(),

@@ -206,9 +206,13 @@ class ElectronicsPack implements IndustryPack
     {
         return [
             'imei_tracking',
-            'serial_tracking',
+            'serial_number_tracking',
             'warranty_management',
             'installment_sales',
+            'low_stock_alerts',
+            'stock_transfers',
+            'cycle_counting',
+            'dead_stock_detection',
         ];
     }
 

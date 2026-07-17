@@ -125,7 +125,19 @@ class WholesalePack implements IndustryPack
 
     public function featureFlags(): array
     {
-        return ['tiered_pricing', 'bulk_discounts', 'b2b_portal', 'credit_accounts', 'quotation_management'];
+        return [
+            'tiered_pricing',
+            'bulk_discounts',
+            'b2b_portal',
+            'credit_accounts',
+            'quotation_management',
+            'batch_tracking',
+            'expiry_tracking',
+            'low_stock_alerts',
+            'stock_transfers',
+            'cycle_counting',
+            'overstock_detection',
+        ];
     }
 
     public function onTenantAssigned(Tenant $tenant): void {}

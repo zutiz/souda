@@ -101,7 +101,17 @@ class CosmeticsPack implements IndustryPack
 
     public function featureFlags(): array
     {
-        return ['shade_management', 'ingredient_tracking', 'skin_type_filtering'];
+        return [
+            'shade_management',
+            'ingredient_tracking',
+            'skin_type_filtering',
+            'batch_tracking',
+            'expiry_tracking',
+            'low_stock_alerts',
+            'stock_transfers',
+            'cycle_counting',
+            'dead_stock_detection',
+        ];
     }
 
     public function onTenantAssigned(Tenant $tenant): void {}

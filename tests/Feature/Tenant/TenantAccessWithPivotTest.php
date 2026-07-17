@@ -3,8 +3,8 @@
 declare(strict_types=1);
 
 use App\Models\Permission;
+use App\Models\Tenant;
 use App\Models\User;
-use App\Tenancy\TenantManager;
 
 beforeEach(function () {
     Permission::firstOrCreate(['name' => 'stores.view']);
@@ -21,7 +21,7 @@ test('legacy user with tenant_id can access tenant routes without pivot record',
 
 test('user can switch to a tenant they only have pivot access to', function () {
     $user = User::factory()->subscribed()->create();
-    $otherTenant = App\Models\Tenant::factory()->shared()->create();
+    $otherTenant = Tenant::factory()->shared()->create();
 
     $user->tenants()->attach($otherTenant->id, [
         'role' => 'owner',
@@ -51,7 +51,7 @@ test('user with both legacy and pivot can access tenant routes', function () {
 
 test('user cannot access another tenant via session manipulation', function () {
     $user = User::factory()->subscribed()->create();
-    $otherTenant = App\Models\Tenant::factory()->shared()->create();
+    $otherTenant = Tenant::factory()->shared()->create();
 
     $this->actingAs($user)
         ->withSession(['active_tenant_id' => $otherTenant->id])

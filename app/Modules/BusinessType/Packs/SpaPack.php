@@ -122,7 +122,18 @@ class SpaPack implements IndustryPack
 
     public function featureFlags(): array
     {
-        return ['appointment_booking', 'membership_plans', 'package_deals', 'therapist_commission', 'online_booking'];
+        return [
+            'appointment_booking',
+            'membership_plans',
+            'package_deals',
+            'therapist_commission',
+            'online_booking',
+            'batch_tracking',
+            'low_stock_alerts',
+            'stock_transfers',
+            'cycle_counting',
+            'dead_stock_detection',
+        ];
     }
 
     public function onTenantAssigned(Tenant $tenant): void {}

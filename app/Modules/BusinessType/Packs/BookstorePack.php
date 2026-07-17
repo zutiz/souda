@@ -110,7 +110,16 @@ class BookstorePack implements IndustryPack
 
     public function featureFlags(): array
     {
-        return ['isbn_management', 'author_tracking', 'publisher_portal'];
+        return [
+            'isbn_management',
+            'author_tracking',
+            'publisher_portal',
+            'low_stock_alerts',
+            'stock_transfers',
+            'cycle_counting',
+            'dead_stock_detection',
+            'overstock_detection',
+        ];
     }
 
     public function onTenantAssigned(Tenant $tenant): void {}

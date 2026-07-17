@@ -59,8 +59,6 @@ class DeductProductStock implements ShouldQueue
     {
         $this->releaseIdempotency($event);
 
-        $this->logFailure($event, $e, [
-            'order_id' => $event->order->orderId,
-        ]);
+        $this->logFailure($event, $e, 'order_id='.$event->order->orderId);
     }
 }

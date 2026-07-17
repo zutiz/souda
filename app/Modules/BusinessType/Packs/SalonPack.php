@@ -228,6 +228,11 @@ class SalonPack implements IndustryPack
             'customer_loyalty',
             'online_booking',
             'waitlist_management',
+            'batch_tracking',
+            'low_stock_alerts',
+            'stock_transfers',
+            'cycle_counting',
+            'dead_stock_detection',
         ];
     }
 

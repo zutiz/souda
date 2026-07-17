@@ -205,6 +205,11 @@ class FashionPack implements IndustryPack
             'seasonal_collections',
             'multi_variant_inventory',
             'size_chart_management',
+            'low_stock_alerts',
+            'stock_transfers',
+            'cycle_counting',
+            'dead_stock_detection',
+            'overstock_detection',
         ];
     }
 

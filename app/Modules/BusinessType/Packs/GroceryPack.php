@@ -138,7 +138,19 @@ class GroceryPack implements IndustryPack
 
     public function featureFlags(): array
     {
-        return ['perishable_tracking', 'unit_conversion', 'supplier_portal', 'bulk_discounts'];
+        return [
+            'perishable_tracking',
+            'unit_conversion',
+            'supplier_portal',
+            'bulk_discounts',
+            'batch_tracking',
+            'expiry_tracking',
+            'fefo_picking',
+            'waste_tracking',
+            'low_stock_alerts',
+            'stock_transfers',
+            'cycle_counting',
+        ];
     }
 
     public function onTenantAssigned(Tenant $tenant): void {}

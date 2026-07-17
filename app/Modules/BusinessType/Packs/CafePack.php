@@ -112,7 +112,17 @@ class CafePack implements IndustryPack
 
     public function featureFlags(): array
     {
-        return ['beverage_customization', 'loyalty_program'];
+        return [
+            'beverage_customization',
+            'loyalty_program',
+            'recipe_management',
+            'recipe_consumption',
+            'waste_tracking',
+            'expiry_tracking',
+            'low_stock_alerts',
+            'stock_transfers',
+            'cycle_counting',
+        ];
     }
 
     public function onTenantAssigned(Tenant $tenant): void {}
