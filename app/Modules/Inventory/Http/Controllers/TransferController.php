@@ -72,7 +72,7 @@ class TransferController
 
     public function send(InventoryTransfer $transfer): RedirectResponse
     {
-        $this->transferEngine->send($transfer);
+        $this->transferEngine->send($transfer->id);
 
         return redirect()->route('inventory.transfers.show', $transfer)
             ->with('success', 'Transfer marked as sent.');
@@ -80,7 +80,7 @@ class TransferController
 
     public function receive(InventoryTransfer $transfer): RedirectResponse
     {
-        $this->transferEngine->receive($transfer);
+        $this->transferEngine->receive($transfer->id);
 
         return redirect()->route('inventory.transfers.show', $transfer)
             ->with('success', 'Transfer completed successfully.');
@@ -88,7 +88,7 @@ class TransferController
 
     public function cancel(InventoryTransfer $transfer): RedirectResponse
     {
-        $this->transferEngine->cancel($transfer, 'Cancelled by user.');
+        $this->transferEngine->cancel($transfer->id, 'Cancelled by user.');
 
         return redirect()->route('inventory.transfers.show', $transfer)
             ->with('success', 'Transfer cancelled.');

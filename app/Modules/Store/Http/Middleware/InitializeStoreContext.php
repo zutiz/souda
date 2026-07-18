@@ -42,6 +42,10 @@ class InitializeStoreContext
 
         $request->session()->put('current_store_id', $store->id);
 
+        if ($request->route()) {
+            $request->route()->forgetParameter('store');
+        }
+
         return $next($request);
     }
 

@@ -18,6 +18,8 @@ readonly class LineItemDTO
         public ?int $discountAmount,
         public ?string $warehouseId,
         public ?array $metadata,
+        public ?string $barcode = null,
+        public string $id = '',
     ) {}
 
     public static function fromArray(array $data): self
@@ -34,6 +36,8 @@ readonly class LineItemDTO
             discountAmount: isset($data['discount_amount']) ? (int) $data['discount_amount'] : null,
             warehouseId: $data['warehouse_id'] ?? null,
             metadata: $data['metadata'] ?? null,
+            barcode: $data['barcode'] ?? null,
+            id: $data['id'] ?? '',
         );
     }
 

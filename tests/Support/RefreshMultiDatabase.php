@@ -82,6 +82,12 @@ trait RefreshMultiDatabase
                 '--path' => 'app/Modules/Store/Database/Migrations/Tenant',
             ]);
 
+            Artisan::call('migrate', [
+                '--force' => true,
+                '--database' => 'shared',
+                '--path' => 'app/Modules/Order/Database/Migrations/Tenant',
+            ]);
+
             static::$migratedShared = true;
         }
 

@@ -17,7 +17,7 @@ class StoreCountRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'warehouse_id' => ['required', 'integer', 'exists:warehouses,id'],
+            'warehouse_id' => ['required', 'integer', 'exists:inventory_warehouses,id'],
             'type' => ['required', 'string', Rule::in(['full', 'cycle', 'partial'])],
             'product_ids' => ['nullable', 'array'],
             'product_ids.*' => ['string', 'max:36'],

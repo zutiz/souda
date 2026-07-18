@@ -246,6 +246,7 @@ return [
             app_path('Modules/Store/Database/Migrations/Tenant'),
             app_path('Modules/Product/Database/Migrations/Tenant'),
             app_path('Modules/Inventory/Database/Migrations/Tenant'),
+            app_path('Modules/Order/Database/Migrations/Tenant'),
         ],
     ],
 

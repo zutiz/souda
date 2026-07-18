@@ -208,6 +208,9 @@ Route::middleware([
     Route::get('/dashboard', function () {
         return Inertia::render('dashboard');
     })->name('store.dashboard');
+
+    // Order module routes
+    require __DIR__.'/order.php';
 });
 
 // SSLCommerz callback - no auth required (external POST from payment gateway + browser GET redirect after payment)

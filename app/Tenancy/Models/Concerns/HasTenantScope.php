@@ -20,7 +20,7 @@ trait HasTenantScope
         static::creating(function ($model) {
             try {
                 $manager = app(TenantManager::class);
-                if ($manager->initialized() && $manager->isShared() && ! $model->tenant_id) {
+                if ($manager->initialized() && ! $model->tenant_id) {
                     $model->tenant_id = $manager->id();
                 }
             } catch (\Throwable) {

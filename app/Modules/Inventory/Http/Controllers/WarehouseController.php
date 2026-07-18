@@ -34,7 +34,7 @@ class WarehouseController
 
     public function show(Warehouse $warehouse): Response
     {
-        $warehouse->load(['bins', 'outgoingTransfers', 'incomingTransfers']);
+        $warehouse->load(['bins', 'outboundTransfers', 'inboundTransfers']);
 
         return Inertia::render('Inventory/Warehouses/Show', [
             'warehouse' => $warehouse,

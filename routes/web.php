@@ -29,3 +29,11 @@ Route::middleware(['web', 'auth'])->group(function () {
 });
 
 require __DIR__.'/settings.php';
+
+// Public tracking — no auth required
+use App\Modules\Order\Http\Controllers\TrackingController;
+
+Route::get('/tracking/{trackingNumber}', [TrackingController::class, 'show'])->name('tracking.show');
+
+// Courier webhooks — no auth, external POST
+Route::post('/webhook/courier/{courier}', [TrackingController::class, 'webhook'])->name('webhook.courier');

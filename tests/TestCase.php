@@ -18,5 +18,10 @@ abstract class TestCase extends BaseTestCase
         $bootingProperty = $reflection->getProperty('booting');
         $bootingProperty->setAccessible(true);
         $bootingProperty->setValue(null, []);
+
+        config([
+            'session.driver' => 'array',
+            'cache.default' => 'array',
+        ]);
     }
 }
