@@ -1,4 +1,5 @@
 import { Head } from '@inertiajs/react';
+import { BrandColorsSettings } from '@/components/brand-colors-settings';
 import AppearanceTabs from '@/components/appearance-tabs';
 import Heading from '@/components/heading';
 import AppLayout from '@/layouts/app-layout';
@@ -28,6 +29,7 @@ export default function Appearance() {
                         description="Update your account's appearance settings"
                     />
                     <AppearanceTabs />
+                    <BrandColorsSettings />
                 </div>
             </SettingsLayout>
         </AppLayout>

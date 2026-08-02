@@ -59,7 +59,8 @@ export default function BatchShow() {
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title={`Batch ${batch.batch_number}`} />
 
-            <div className="mb-4 flex items-center justify-between">
+            <div className="flex h-full flex-1 flex-col gap-6 overflow-x-auto p-4 lg:p-6">
+                <div className="mb-4 flex items-center justify-between">
                 <PageHeader title={`Batch ${batch.batch_number}`} description={batch.supplier_batch ?? 'No supplier batch reference'} />
                 {batch.status === 'active' && (
                     <button onClick={quarantine} className="rounded-lg bg-red-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-red-700">
@@ -138,6 +139,7 @@ export default function BatchShow() {
                     </div>
                 </div>
             )}
+            </div>
         </AppLayout>
     );
 }

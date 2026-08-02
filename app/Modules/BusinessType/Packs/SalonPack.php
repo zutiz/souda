@@ -236,6 +236,20 @@ class SalonPack implements IndustryPack
         ];
     }
 
+    public function branding(): array
+    {
+        return [
+            'primary' => 'oklch(0.55 0.18 310)',     // Luxurious purple
+            'primary_foreground' => 'oklch(0.985 0 0)',
+            'accent' => 'oklch(0.95 0.08 310)',      // Soft pink
+            'accent_foreground' => 'oklch(0.205 0 0)',
+            'sidebar' => 'oklch(0.96 0.06 310)',
+            'sidebar_foreground' => 'oklch(0.205 0 0)',
+            'sidebar_accent' => 'oklch(0.90 0.08 310)',
+            'radius' => '0.875rem',                  // Soft, elegant rounding
+        ];
+    }
+
     public function onTenantAssigned(Tenant $tenant): void {}
 
     public function onTenantRemoved(Tenant $tenant): void {}

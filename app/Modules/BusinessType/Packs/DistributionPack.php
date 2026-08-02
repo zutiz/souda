@@ -113,6 +113,20 @@ class DistributionPack implements IndustryPack
         ];
     }
 
+    public function branding(): array
+    {
+        return [
+            'primary' => 'oklch(0.55 0.15 230)',     // Logistics blue
+            'primary_foreground' => 'oklch(0.985 0 0)',
+            'accent' => 'oklch(0.75 0.12 45)',       // Amber
+            'accent_foreground' => 'oklch(0.205 0 0)',
+            'sidebar' => 'oklch(0.22 0 0)',
+            'sidebar_foreground' => 'oklch(0.985 0 0)',
+            'sidebar_accent' => 'oklch(0.35 0.08 230)',
+            'radius' => '0.5rem',                    // Standard
+        ];
+    }
+
     public function onTenantAssigned(Tenant $tenant): void {}
 
     public function onTenantRemoved(Tenant $tenant): void {}

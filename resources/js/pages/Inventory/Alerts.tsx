@@ -61,7 +61,8 @@ export default function InventoryAlerts() {
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Inventory Alerts" />
 
-            <PageHeader title="Alerts" description="Low stock, dead stock, overstock, and rule-triggered alerts" />
+            <div className="flex h-full flex-1 flex-col gap-6 overflow-x-auto p-4 lg:p-6">
+                <PageHeader title="Alerts" description="Low stock, dead stock, overstock, and rule-triggered alerts" />
 
             <div className="space-y-6">
                 {persistentAlerts.length > 0 && (
@@ -118,13 +119,14 @@ export default function InventoryAlerts() {
                     ))}
                 </AlertSection>
 
-                <AlertSection title="Overstock (&gt;1000 units)" count={overstock.length} variant="default" empty="No overstock items.">
+                <AlertSection title="Overstock (>1000 units)" count={overstock.length} variant="default" empty="No overstock items.">
                     {overstock.map((item) => (
                         <AlertRow key={item.id} item={item}>
                             <span className="font-medium">{item.quantity} units</span>
                         </AlertRow>
                     ))}
                 </AlertSection>
+            </div>
             </div>
         </AppLayout>
     );

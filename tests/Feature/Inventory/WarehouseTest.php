@@ -3,14 +3,16 @@
 declare(strict_types=1);
 
 use App\Models\User;
+use App\Tenancy\TenantManager;
 use App\Modules\Inventory\Models\InventoryBin;
 use App\Modules\Inventory\Models\Warehouse;
 use Illuminate\Database\QueryException;
 
 beforeEach(function () {
-    $this->user = User::factory()->subscribed()->create();
+    $this->user = User::factory()->sharedSubscribed()->create();
 
     tenancy()->initialize($this->user->tenant);
+    app(TenantManager::class)->initialize($this->user->tenant);
 });
 
 test('can create a warehouse', function () {

@@ -73,7 +73,8 @@ export default function CreateTransfer() {
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="New Transfer" />
 
-            <PageHeader title="New Transfer" description="Create a stock transfer between warehouses" />
+            <div className="flex h-full flex-1 flex-col gap-6 overflow-x-auto p-4 lg:p-6">
+                <PageHeader title="New Transfer" description="Create a stock transfer between warehouses" />
 
             <form onSubmit={submit} className="max-w-2xl space-y-6">
                 <div className="rounded-lg border border-sidebar-border p-4 space-y-4">
@@ -150,6 +151,7 @@ export default function CreateTransfer() {
                     <Button type="button" variant="outline" onClick={() => window.history.back()}>Cancel</Button>
                 </div>
             </form>
+            </div>
         </AppLayout>
     );
 }

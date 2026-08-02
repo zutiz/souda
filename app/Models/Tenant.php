@@ -112,6 +112,11 @@ class Tenant extends BaseTenant implements TenantWithDatabase
         return $this->belongsTo(BusinessType::class, 'business_type_id');
     }
 
+    public function tenantSetting(): HasOne
+    {
+        return $this->hasOne(TenantSetting::class, 'tenant_id');
+    }
+
     public function activeSubscription(): ?Subscription
     {
         return $this->subscriptions()

@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Models\User;
+use App\Tenancy\TenantManager;
 use App\Modules\Inventory\Events\LowStockAlert;
 use App\Modules\Inventory\Models\Warehouse;
 use App\Modules\Inventory\Services\AlertEngine;
@@ -10,9 +11,10 @@ use App\Modules\Inventory\Services\InventoryEngine;
 use App\Modules\Product\Models\Product;
 
 beforeEach(function () {
-    $this->user = User::factory()->subscribed()->create();
+    $this->user = User::factory()->sharedSubscribed()->create();
 
     tenancy()->initialize($this->user->tenant);
+    app(TenantManager::class)->initialize($this->user->tenant);
 
     $this->product = Product::factory()->create([
         'low_stock_threshold' => 10,
@@ -110,7 +112,7 @@ test('findOverstock returns empty when no items exceed threshold', function () {
 });
 
 test('evaluate dispatches low stock alert when below threshold', function () {
-    Illuminate\Support\Facades\Event::fake();
+    Illuminate\Support\Facades\Event::fake([LowStockAlert::class]);
 
     $this->inventoryEngine->recordMovement(
         productId: $this->product->id,

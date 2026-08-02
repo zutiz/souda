@@ -74,7 +74,8 @@ export default function RulesCreate() {
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Create Rule" />
 
-            <PageHeader title="Create Rule" description="Define an IF-THEN automation rule" />
+            <div className="flex h-full flex-1 flex-col gap-6 overflow-x-auto p-4 lg:p-6">
+                <PageHeader title="Create Rule" description="Define an IF-THEN automation rule" />
 
             <div className="max-w-2xl">
                 <form onSubmit={handleSubmit} className="space-y-6">
@@ -181,6 +182,7 @@ export default function RulesCreate() {
                         <Button type="submit" disabled={processing}>Create Rule</Button>
                     </div>
                 </form>
+            </div>
             </div>
         </AppLayout>
     );

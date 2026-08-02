@@ -3,6 +3,7 @@ import {
     Calendar,
     CreditCard,
     Package,
+    RefreshCcw,
     ShoppingCart,
     Truck,
     type LucideIcon,
@@ -53,6 +54,10 @@ export const moduleNavMap: Record<string, ModuleNavDef> = {
         icon: ShoppingCart,
         items: [
             { title: 'All Orders', href: '/orders' },
+            { title: 'Create Order', href: '/orders/create' },
+            { title: 'Shipments', href: '/orders/shipments' },
+            { title: 'Returns', href: '/orders/returns' },
+            { title: 'Refunds', href: '/orders/refunds' },
         ],
     },
     pos: {

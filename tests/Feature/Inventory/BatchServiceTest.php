@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Models\User;
+use App\Tenancy\TenantManager;
 use App\Modules\Inventory\Enums\BatchStatusEnum;
 use App\Modules\Inventory\Events\BatchDepleted;
 use App\Modules\Inventory\Events\BatchQuarantined;
@@ -14,9 +15,10 @@ use App\Modules\Inventory\Services\BatchService;
 use App\Modules\Product\Models\Product;
 
 beforeEach(function () {
-    $this->user = User::factory()->subscribed()->create();
+    $this->user = User::factory()->sharedSubscribed()->create();
 
     tenancy()->initialize($this->user->tenant);
+    app(TenantManager::class)->initialize($this->user->tenant);
 
     $this->product = Product::factory()->create();
     $this->warehouse = Warehouse::factory()->create(['slug' => 'batch-wh']);
@@ -122,7 +124,7 @@ test('deduct marks batch depleted when quantity reaches zero', function () {
 });
 
 test('deduct dispatches BatchDepleted event when depleted', function () {
-    Event::fake();
+    Event::fake([BatchDepleted::class]);
 
     $this->batchService->receive(
         productId: $this->product->id,
@@ -214,7 +216,7 @@ test('can quarantine a batch', function () {
 });
 
 test('quarantine dispatches BatchQuarantined event', function () {
-    Event::fake();
+    Event::fake([BatchQuarantined::class]);
 
     $this->batchService->receive(
         productId: $this->product->id,

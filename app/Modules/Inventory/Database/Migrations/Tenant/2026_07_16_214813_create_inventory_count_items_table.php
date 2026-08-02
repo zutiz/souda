@@ -10,6 +10,7 @@ return new class extends Migration
     {
         Schema::create('inventory_count_items', function (Blueprint $table) {
             $table->id();
+            $table->string('tenant_id', 36);
             $table->foreignId('count_id')->constrained('inventory_counts')->cascadeOnDelete();
             $table->string('product_id', 36);
             $table->string('variant_id', 36)->nullable();

@@ -52,7 +52,8 @@ export default function CountIndex() {
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Physical Counts" />
 
-            <PageHeader title="Physical Counts" description="Cycle counting and full inventory counts">
+            <div className="flex h-full flex-1 flex-col gap-6 overflow-x-auto p-4 lg:p-6">
+                <PageHeader title="Physical Counts" description="Cycle counting and full inventory counts">
                 <Link href="/inventory/counts/create">
                     <Button>New Count</Button>
                 </Link>
@@ -111,6 +112,7 @@ export default function CountIndex() {
                 perPage={counts.per_page}
                 total={counts.total}
             />
+            </div>
         </AppLayout>
     );
 }

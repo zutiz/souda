@@ -84,7 +84,8 @@ export default function RulesShow() {
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title={rule.name} />
 
-            <PageHeader title={rule.name} description={rule.description ?? 'Automation rule'}>
+            <div className="flex h-full flex-1 flex-col gap-6 overflow-x-auto p-4 lg:p-6">
+                <PageHeader title={rule.name} description={rule.description ?? 'Automation rule'}>
                 <div className="flex items-center gap-2">
                     <Button variant="outline" onClick={toggleRule}>
                         {rule.is_active ? 'Deactivate' : 'Activate'}
@@ -172,6 +173,7 @@ export default function RulesShow() {
                         </div>
                     ))}
                 </div>
+            </div>
             </div>
         </AppLayout>
     );

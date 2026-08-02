@@ -61,7 +61,8 @@ export default function ForecastsShow() {
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title={forecast.product?.name ?? 'Forecast Detail'} />
 
-            <PageHeader title={forecast.product?.name ?? 'Forecast Detail'} description={`SKU: ${forecast.product?.sku ?? '—'}`} />
+            <div className="flex h-full flex-1 flex-col gap-6 overflow-x-auto p-4 lg:p-6">
+                <PageHeader title={forecast.product?.name ?? 'Forecast Detail'} description={`SKU: ${forecast.product?.sku ?? '—'}`} />
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
                 <div className="rounded-lg border border-sidebar-border p-4">
@@ -161,6 +162,7 @@ export default function ForecastsShow() {
                         ))}
                     </div>
                 </div>
+            </div>
             </div>
         </AppLayout>
     );

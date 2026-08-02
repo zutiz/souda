@@ -9,10 +9,12 @@ import { ProductImageUpload } from './product-image-upload';
 import { VariantGrid } from './variant-grid';
 import { AttributeManager } from './attribute-manager';
 import { PageHeader } from '@/modules/shared/components/page-header';
+import { FormSectionCollapsible, FormSectionGroup } from '@/modules/shared/components/form-section';
 import { FormActions } from '@/modules/shared/components/form-actions';
 import { useProductForm } from '../hooks/use-product-form';
 import type { ProductFormData } from '../types/product-form';
 import type { VariantGroup, VariantRowFormData, AttributeFormData } from '../types/variant';
+import { Truck, Search } from 'lucide-react';
 
 type Props = {
     mode: 'create' | 'edit';
@@ -75,66 +77,91 @@ export function ProductFormPage({
             />
 
             <div className="mx-auto max-w-4xl space-y-6 px-4 py-6 sm:px-6 lg:px-8">
-                <ProductGeneralSection
-                    form={form}
-                    categories={categories}
-                    brands={brands}
-                    errors={errors}
-                    onChange={nestedOnChange.general}
-                />
+                <FormSectionGroup>
+                    <FormSectionGroup>
+                        <ProductGeneralSection
+                            form={form}
+                            categories={categories}
+                            brands={brands}
+                            errors={errors}
+                            onChange={nestedOnChange.general}
+                        />
+                    </FormSectionGroup>
 
-                <ProductPricingSection
-                    form={form}
-                    errors={errors}
-                    onChange={nestedOnChange.pricing}
-                />
+                    <ProductPricingSection
+                        form={form}
+                        errors={errors}
+                        onChange={nestedOnChange.pricing}
+                    />
 
-                <ProductInventorySection
-                    form={form}
-                    errors={errors}
-                    onChange={nestedOnChange.inventory}
-                />
+                    <ProductInventorySection
+                        form={form}
+                        errors={errors}
+                        onChange={nestedOnChange.inventory}
+                    />
+                </FormSectionGroup>
 
-                <ProductImageUpload
-                    images={images ?? []}
-                    errors={errors}
-                    onChange={onChange}
-                />
+                <FormSectionGroup>
+                    <ProductImageUpload
+                        images={images ?? []}
+                        errors={errors}
+                        onChange={onChange}
+                    />
 
-                <VariantGrid
-                    variants={(variants ?? []) as VariantRowFormData[]}
-                    variantGroups={(variantGroups ?? []) as VariantGroup[]}
-                    parentSku={sku}
-                    productImages={images}
-                    errors={errors}
-                    onChange={onChange as (field: 'variants', value: VariantRowFormData[]) => void}
-                    onGroupsChange={onChange as (field: 'variantGroups', value: VariantGroup[]) => void}
-                />
+                    <VariantGrid
+                        variants={(variants ?? []) as VariantRowFormData[]}
+                        variantGroups={(variantGroups ?? []) as VariantGroup[]}
+                        parentSku={sku}
+                        productImages={images}
+                        errors={errors}
+                        onChange={onChange as (field: 'variants', value: VariantRowFormData[]) => void}
+                        onGroupsChange={onChange as (field: 'variantGroups', value: VariantGroup[]) => void}
+                    />
 
-                <AttributeManager
-                    attributes={(attributes ?? []) as AttributeFormData[]}
-                    errors={errors}
-                    onChange={onChange as (field: 'attributes', value: AttributeFormData[]) => void}
-                />
+                    <AttributeManager
+                        attributes={(attributes ?? []) as AttributeFormData[]}
+                        errors={errors}
+                        onChange={onChange as (field: 'attributes', value: AttributeFormData[]) => void}
+                    />
+                </FormSectionGroup>
 
-                <ProductShippingSection
-                    form={form}
-                    open={shippingOpen}
-                    onToggle={() => setShippingOpen((p) => !p)}
-                    errors={errors}
-                    onChange={nestedOnChange.shipping}
-                />
+                <FormSectionGroup>
+                    <FormSectionCollapsible
+                        title="Shipping"
+                        description="Configure shipping options and costs"
+                        icon={Truck}
+                        open={shippingOpen}
+                        onToggle={() => setShippingOpen((p) => !p)}
+                    >
+                        <ProductShippingSection
+                            form={form}
+                            open={shippingOpen}
+                            onToggle={() => setShippingOpen((p) => !p)}
+                            errors={errors}
+                            onChange={nestedOnChange.shipping}
+                        />
+                    </FormSectionCollapsible>
 
-                <ProductSeoSection
-                    form={form}
-                    open={seoOpen}
-                    onToggle={() => setSeoOpen((p) => !p)}
-                    errors={errors}
-                    onChange={nestedOnChange.seo}
-                />
+                    <FormSectionCollapsible
+                        title="SEO"
+                        description="Optimize product visibility in search engines"
+                        icon={Search}
+                        open={seoOpen}
+                        onToggle={() => setSeoOpen((p) => !p)}
+                    >
+                        <ProductSeoSection
+                            form={form}
+                            open={seoOpen}
+                            onToggle={() => setSeoOpen((p) => !p)}
+                            errors={errors}
+                            onChange={nestedOnChange.seo}
+                        />
+                    </FormSectionCollapsible>
+                </FormSectionGroup>
             </div>
 
             <FormActions
+                variant="sticky"
                 onCancel={onCancel}
                 submitLabel={mode === 'create' ? 'Create Product' : 'Save Changes'}
                 processing={processing}

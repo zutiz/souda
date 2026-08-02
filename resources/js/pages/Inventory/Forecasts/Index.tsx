@@ -89,7 +89,8 @@ export default function ForecastsIndex() {
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Demand Forecasts" />
 
-            <PageHeader title="Demand Forecasts" description="AI-driven demand predictions and reorder insights">
+            <div className="flex h-full flex-1 flex-col gap-6 overflow-x-auto p-4 lg:p-6">
+                <PageHeader title="Demand Forecasts" description="AI-driven demand predictions and reorder insights">
                 <div className="flex items-center gap-2">
                     <Button variant="outline" onClick={resolveExpired}>Resolve Expired</Button>
                 </div>
@@ -210,6 +211,7 @@ export default function ForecastsIndex() {
                 perPage={forecasts.per_page}
                 total={forecasts.total}
             />
+            </div>
         </AppLayout>
     );
 }

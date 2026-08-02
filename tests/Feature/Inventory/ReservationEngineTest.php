@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Models\User;
+use App\Tenancy\TenantManager;
 use App\Modules\Inventory\Events\StockReservationCancelled;
 use App\Modules\Inventory\Events\StockReservationCreated;
 use App\Modules\Inventory\Exceptions\InsufficientStockException;
@@ -15,9 +16,10 @@ use App\Modules\Product\Models\Warehouse;
 use Carbon\CarbonImmutable;
 
 beforeEach(function () {
-    $this->user = User::factory()->subscribed()->create();
+    $this->user = User::factory()->sharedSubscribed()->create();
 
     tenancy()->initialize($this->user->tenant);
+    app(TenantManager::class)->initialize($this->user->tenant);
 
     $this->product = Product::factory()->create();
     $this->warehouse = Warehouse::factory()->create();
@@ -269,7 +271,7 @@ test('expireOldReservations marks expired reservations', function () {
 });
 
 test('reserve dispatches StockReservationCreated event', function () {
-    Event::fake();
+    Event::fake([StockReservationCreated::class]);
 
     $this->inventoryEngine->recordMovement(
         productId: $this->product->id, variantId: null,
@@ -290,7 +292,7 @@ test('reserve dispatches StockReservationCreated event', function () {
 });
 
 test('cancel dispatches StockReservationCancelled event', function () {
-    Event::fake();
+    Event::fake([StockReservationCancelled::class]);
 
     $this->inventoryEngine->recordMovement(
         productId: $this->product->id, variantId: null,

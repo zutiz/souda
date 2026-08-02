@@ -62,7 +62,8 @@ export default function ReservationIndex() {
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Reservations" />
 
-            <PageHeader title="Stock Reservations" description="Active and historical stock reservations" />
+            <div className="flex h-full flex-1 flex-col gap-6 overflow-x-auto p-4 lg:p-6">
+                <PageHeader title="Stock Reservations" description="Active and historical stock reservations" />
 
             <div className="mb-4 flex items-center gap-3">
                 <select
@@ -124,7 +125,14 @@ export default function ReservationIndex() {
                 </table>
             </div>
 
-            <Pagination meta={reservations} />
+            <Pagination
+                links={reservations.links}
+                currentPage={reservations.current_page}
+                lastPage={reservations.last_page}
+                perPage={reservations.per_page}
+                total={reservations.total}
+            />
+            </div>
         </AppLayout>
     );
 }

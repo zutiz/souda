@@ -23,6 +23,7 @@ import {
     SidebarHeader,
     SidebarSeparator,
 } from '@/components/ui/sidebar';
+import { Separator } from '@/components/ui/separator';
 import type { NavItem } from '@/types';
 import { useEnabledModules } from '@/hooks/use-tenant-config';
 import { buildModuleNavItems } from './module-nav-items';
@@ -83,7 +84,7 @@ export function AppSidebar() {
                 <div className="px-3 py-2">
                     <TenantSwitcher />
                 </div>
-                <SidebarSeparator />
+                <Separator className="mx-3 my-1" />
                 <div className="px-3 py-1">
                     <StoreSwitcher />
                 </div>

@@ -12,6 +12,7 @@ return new class extends Migration
     {
         Schema::create('inventory_transfer_items', function (Blueprint $table) {
             $table->id();
+            $table->string('tenant_id', 36);
             $table->unsignedBigInteger('transfer_id');
             $table->string('product_id', 26);
             $table->string('variant_id', 26)->nullable();

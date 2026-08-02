@@ -10,6 +10,7 @@ return new class extends Migration
     {
         Schema::create('inventory_counts', function (Blueprint $table) {
             $table->id();
+            $table->string('tenant_id', 36);
             $table->integer('warehouse_id');
             $table->string('reference')->unique();
             $table->string('type')->default('full');

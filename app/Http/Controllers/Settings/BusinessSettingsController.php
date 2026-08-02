@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Settings;
 
 use App\Http\Controllers\Controller;
+use App\Models\TenantSetting;
 use App\Modules\BusinessType\Models\BusinessType;
 use App\Modules\BusinessType\Services\BusinessTypeEngine;
 use App\Tenancy\TenantManager;
@@ -61,5 +62,53 @@ class BusinessSettingsController extends Controller
         }
 
         return redirect()->back()->with('success', 'Business settings updated.');
+    }
+
+    public function updateBranding(Request $request): RedirectResponse
+    {
+        $tenant = $this->tenantManager->current();
+
+        if ($tenant === null) {
+            return redirect()->back()->with('error', 'No active tenant.');
+        }
+
+        $validated = $request->validate([
+            'brand_primary_color' => ['sometimes', 'nullable', 'string', 'regex:/^#[0-9A-Fa-f]{6}$/'],
+            'brand_accent_color' => ['sometimes', 'nullable', 'string', 'regex:/^#[0-9A-Fa-f]{6}$/'],
+            'brand_logo_url' => ['sometimes', 'nullable', 'url', 'max:500'],
+            'reset_colors' => ['sometimes', 'boolean'],
+            'reset_logo' => ['sometimes', 'boolean'],
+        ]);
+
+        $tenantSetting = TenantSetting::firstOrCreate(
+            ['tenant_id' => $tenant->id],
+            ['tenant_id' => $tenant->id]
+        );
+
+        if ($request->boolean('reset_colors')) {
+            $tenantSetting->brand_primary_color = null;
+            $tenantSetting->brand_accent_color = null;
+        } else {
+            if (isset($validated['brand_primary_color'])) {
+                $tenantSetting->brand_primary_color = $validated['brand_primary_color'];
+            }
+
+            if (isset($validated['brand_accent_color'])) {
+                $tenantSetting->brand_accent_color = $validated['brand_accent_color'];
+            }
+        }
+
+        if ($request->boolean('reset_logo')) {
+            $tenantSetting->brand_logo_url = null;
+        } elseif (isset($validated['brand_logo_url'])) {
+            $tenantSetting->brand_logo_url = $validated['brand_logo_url'];
+        }
+
+        $tenantSetting->save();
+
+        // Invalidate tenant config cache so new branding takes effect
+        $this->businessTypeEngine->invalidateConfig($tenant);
+
+        return redirect()->back()->with('success', 'Branding updated.');
     }
 }

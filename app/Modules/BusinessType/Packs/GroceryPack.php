@@ -153,6 +153,20 @@ class GroceryPack implements IndustryPack
         ];
     }
 
+    public function branding(): array
+    {
+        return [
+            'primary' => 'oklch(0.60 0.15 145)',     // Fresh green
+            'primary_foreground' => 'oklch(0.985 0 0)',
+            'accent' => 'oklch(0.94 0.06 145)',      // Light green
+            'accent_foreground' => 'oklch(0.205 0 0)',
+            'sidebar' => 'oklch(0.96 0.04 145)',
+            'sidebar_foreground' => 'oklch(0.205 0 0)',
+            'sidebar_accent' => 'oklch(0.92 0.05 145)',
+            'radius' => '0.5rem',                    // Standard, fresh feel
+        ];
+    }
+
     public function onTenantAssigned(Tenant $tenant): void {}
 
     public function onTenantRemoved(Tenant $tenant): void {}

@@ -12,6 +12,7 @@ use App\Modules\Order\Http\Requests\UpdateOrderStatusRequest;
 use App\Modules\Order\Models\Order;
 use App\Modules\Order\Services\OrderService;
 use App\Modules\Order\Services\OrderTimelineService;
+use App\Modules\Store\Models\Store;
 use App\Modules\Store\Services\StoreContextManager;
 use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
@@ -34,6 +35,11 @@ class OrderController
     {
         $storeId = $this->storeContext->id();
 
+        if ($storeId === null) {
+            $defaultStore = Store::query()->default()->first();
+            $storeId = $defaultStore?->id ?? '';
+        }
+
         $orders = $this->orderService->listOrders($storeId, $request->only([
             'status', 'order_type', 'customer_id', 'date_from', 'date_to', 'search',
         ]));
@@ -54,6 +60,16 @@ class OrderController
         $this->authorize('create', Order::class);
 
         $storeId = $this->storeContext->id();
+
+        if ($storeId === null) {
+            $defaultStore = Store::query()->default()->first();
+
+            if ($defaultStore === null) {
+                return redirect()->back()->with('error', 'No store selected and no default store found.');
+            }
+
+            $storeId = $defaultStore->id;
+        }
 
         $shippingAddress = new OrderAddressDTO(
             name: $request->input('shipping_name', ''),

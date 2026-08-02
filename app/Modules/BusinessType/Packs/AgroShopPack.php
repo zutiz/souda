@@ -113,6 +113,20 @@ class AgroShopPack implements IndustryPack
         ];
     }
 
+    public function branding(): array
+    {
+        return [
+            'primary' => 'oklch(0.55 0.12 130)',     // Earthy green
+            'primary_foreground' => 'oklch(0.985 0 0)',
+            'accent' => 'oklch(0.70 0.08 50)',       // Warm brown
+            'accent_foreground' => 'oklch(0.985 0 0)',
+            'sidebar' => 'oklch(0.96 0.03 130)',
+            'sidebar_foreground' => 'oklch(0.205 0 0)',
+            'sidebar_accent' => 'oklch(0.85 0.06 130)',
+            'radius' => '0.625rem',                  // Natural feel
+        ];
+    }
+
     public function onTenantAssigned(Tenant $tenant): void {}
 
     public function onTenantRemoved(Tenant $tenant): void {}

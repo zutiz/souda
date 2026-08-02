@@ -21,6 +21,21 @@ class TenantSetting extends Model
         ];
     }
 
+    public function getBrandLogoUrlAttribute(): ?string
+    {
+        return $this->brand_logo_url ?? null;
+    }
+
+    public function getPrimaryColorAttribute(): ?string
+    {
+        return $this->brand_primary_color ?? null;
+    }
+
+    public function getAccentColorAttribute(): ?string
+    {
+        return $this->brand_accent_color ?? null;
+    }
+
     public function getConnectionName(): ?string
     {
         $manager = app(TenantManager::class);

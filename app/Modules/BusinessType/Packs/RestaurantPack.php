@@ -251,6 +251,20 @@ class RestaurantPack implements IndustryPack
         ];
     }
 
+    public function branding(): array
+    {
+        return [
+            'primary' => 'oklch(0.65 0.19 40)',      // Warm orange
+            'primary_foreground' => 'oklch(0.985 0 0)',
+            'accent' => 'oklch(0.95 0.15 60)',       // Light warm
+            'accent_foreground' => 'oklch(0.205 0 0)',
+            'sidebar' => 'oklch(0.96 0.05 40)',
+            'sidebar_foreground' => 'oklch(0.205 0 0)',
+            'sidebar_accent' => 'oklch(0.92 0.08 40)',
+            'radius' => '0.75rem',                   // More rounded for warm feel
+        ];
+    }
+
     public function onTenantAssigned(Tenant $tenant): void {}
 
     public function onTenantRemoved(Tenant $tenant): void {}

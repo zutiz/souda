@@ -5,10 +5,12 @@ declare(strict_types=1);
 use App\Http\Middleware\EnsureTenantHasSubscription;
 use App\Http\Middleware\InitializeTenancyByUser;
 use App\Models\User;
+use App\Tenancy\TenantManager;
 
 beforeEach(function () {
-    $this->user = User::factory()->subscribed()->create();
+    $this->user = User::factory()->sharedSubscribed()->create();
     tenancy()->initialize($this->user->tenant);
+    app(TenantManager::class)->initialize($this->user->tenant);
 
     $this->withoutMiddleware([
         InitializeTenancyByUser::class,

@@ -2,28 +2,32 @@ import { usePage } from '@inertiajs/react';
 import AppLogoIcon from './app-logo-icon';
 
 export default function AppLogo() {
-    const { name, logo } = usePage().props;
+    const { props } = usePage();
+    const name = props.name as string;
+    const globalLogo = props.logo as string | null;
+    const tenantLogo = props.tenantLogo as string | null;
+
+    // Tenant logo takes priority, then global logo, then default icon
+    const displayLogo = tenantLogo || globalLogo;
 
     return (
-        <>
-            {logo ? (
-                <div className="flex aspect-square size-8 items-center justify-center">
+        <div className="flex items-center gap-2.5">
+            {displayLogo ? (
+                <div className="flex size-9 items-center justify-center">
                     <img
-                        src={logo}
+                        src={displayLogo}
                         alt={name}
-                        className="size-8 object-contain"
+                        className="max-h-9 max-w-9 object-contain"
                     />
                 </div>
             ) : (
-                <div className="flex aspect-square size-8 items-center justify-center">
-                    <AppLogoIcon className="size-8" />
+                <div className="flex size-9 items-center justify-center">
+                    <AppLogoIcon className="size-9" />
                 </div>
             )}
-            <div className="ml-1 grid flex-1 text-left text-sm">
-                <span className="mb-0.5 truncate leading-tight font-semibold">
-                    {name}
-                </span>
-            </div>
-        </>
+            <span className="truncate text-sm font-semibold leading-none whitespace-nowrap">
+                {name}
+            </span>
+        </div>
     );
 }

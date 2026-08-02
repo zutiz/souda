@@ -15,6 +15,7 @@ Route::middleware(['auth', InitializeTenancyByUser::class])->group(function () {
     Route::get('settings/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('settings/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::patch('settings/business', [BusinessSettingsController::class, 'update'])->name('business.update');
+    Route::patch('settings/branding', [BusinessSettingsController::class, 'updateBranding'])->name('branding.update');
     Route::get('settings/connected-accounts', [ConnectedAccountsController::class, 'index'])
         ->name('settings.connected-accounts');
     Route::get('settings/connected-accounts/{provider}/redirect', [ConnectedAccountsController::class, 'redirect'])

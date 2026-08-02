@@ -12,6 +12,7 @@ return new class extends Migration
     {
         Schema::create('serial_numbers', function (Blueprint $table) {
             $table->id();
+            $table->string('tenant_id', 36);
             $table->string('product_id', 26);
             $table->string('variant_id', 26)->nullable();
             $table->string('serial_number', 200);

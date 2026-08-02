@@ -12,6 +12,7 @@ return new class extends Migration
     {
         Schema::create('inventory_transfers', function (Blueprint $table) {
             $table->id();
+            $table->string('tenant_id', 36);
             $table->string('reference', 100)->unique();
             $table->unsignedBigInteger('from_warehouse_id');
             $table->unsignedBigInteger('to_warehouse_id');

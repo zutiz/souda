@@ -6,6 +6,7 @@ namespace App\Modules\Order\Http\Controllers;
 
 use App\Modules\Order\Models\Order;
 use App\Modules\Order\Services\OrderService;
+use App\Modules\Store\Models\Store;
 use App\Modules\Store\Services\StoreContextManager;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\RedirectResponse;
@@ -21,6 +22,19 @@ class BulkOrderController
         protected StoreContextManager $storeContext,
     ) {}
 
+    private function getStoreId(): string
+    {
+        $storeId = $this->storeContext->id();
+
+        if ($storeId === null) {
+            $defaultStore = Store::query()->default()->first();
+
+            return $defaultStore?->id ?? '';
+        }
+
+        return $storeId;
+    }
+
     public function updateStatus(Request $request): RedirectResponse
     {
         $request->validate([
@@ -29,7 +43,7 @@ class BulkOrderController
             'status' => ['required', 'string', 'in:confirmed,processing,completed,cancelled,on_hold'],
         ]);
 
-        $storeId = $this->storeContext->id();
+        $storeId = $this->getStoreId();
         $status = $request->input('status');
         $orderIds = $request->input('order_ids', []);
         $processed = 0;
@@ -72,7 +86,7 @@ class BulkOrderController
             'reason' => ['required', 'string', 'max:500'],
         ]);
 
-        $storeId = $this->storeContext->id();
+        $storeId = $this->getStoreId();
         $reason = $request->input('reason');
         $orderIds = $request->input('order_ids', []);
         $processed = 0;

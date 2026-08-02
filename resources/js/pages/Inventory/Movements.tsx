@@ -44,7 +44,8 @@ export default function InventoryMovements() {
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Stock Movements" />
 
-            <PageHeader title="Movements" description="All stock movements across warehouses" />
+            <div className="flex h-full flex-1 flex-col gap-6 overflow-x-auto p-4 lg:p-6">
+                <PageHeader title="Movements" description="All stock movements across warehouses" />
 
             <div className="rounded-lg border border-sidebar-border">
                 <table className="w-full">
@@ -91,6 +92,7 @@ export default function InventoryMovements() {
                 perPage={movements.per_page}
                 total={movements.total}
             />
+            </div>
         </AppLayout>
     );
 }

@@ -122,6 +122,20 @@ class BookstorePack implements IndustryPack
         ];
     }
 
+    public function branding(): array
+    {
+        return [
+            'primary' => 'oklch(0.50 0.06 50)',      // Warm brown
+            'primary_foreground' => 'oklch(0.985 0 0)',
+            'accent' => 'oklch(0.95 0.04 60)',       // Cream
+            'accent_foreground' => 'oklch(0.205 0 0)',
+            'sidebar' => 'oklch(0.96 0.02 50)',
+            'sidebar_foreground' => 'oklch(0.205 0 0)',
+            'sidebar_accent' => 'oklch(0.90 0.03 50)',
+            'radius' => '0.5rem',                    // Classic
+        ];
+    }
+
     public function onTenantAssigned(Tenant $tenant): void {}
 
     public function onTenantRemoved(Tenant $tenant): void {}

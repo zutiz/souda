@@ -85,8 +85,10 @@ This file is for AI coding agents. It defines exact conventions, patterns, guard
 | Name | Database (prod) | Database (test) | Purpose | Models use |
 |---|---|---|---|---|
 | `central` | `souda` | `souda_testing` | Users, tenants, billing, business types, roles | `CentralConnection` trait |
-| `shared` | `souda_shared` | `souda_shared` | Shared-mode tenant data (stores, settings, tasks, configs) | `HasTenantScope` trait |
+| `shared` | `souda_shared` | `souda_shared` | Shared-mode tenant data (products, stores, orders, inventory, settings, tasks, configs) | `HasTenantScope` trait (models); migrations are plain `Schema::create()` + `--database=shared` |
 | `mysql` | `souda` | `souda_testing` | Default / template for dedicated tenant DBs | Normal Eloquent |
+
+**Migrations reach `souda_shared` two ways:** core `database/migrations/shared/*` files use `Schema::connection('shared')` explicitly; module `app/Modules/*/Database/Migrations/Tenant/*` files use plain `Schema::create()` and are routed to `souda_shared` via the `--database=shared` migrator flag (see "New Migration (Shared DB — Critical)").
 
 In tests, `central` and `mysql` both point to `souda_testing`, so test processes must run sequentially — parallel migrations collide.
 
@@ -164,7 +166,7 @@ public static function bootHasTenantScope(): void
     static::creating(function ($model) {
         try {
             $manager = app(TenantManager::class);
-            if ($manager->initialized() && $manager->isShared() && ! $model->tenant_id) {
+            if ($manager->initialized() && ! $model->tenant_id) {
                 $model->tenant_id = $manager->id();
             }
         } catch (\Throwable) {
@@ -173,6 +175,8 @@ public static function bootHasTenantScope(): void
     });
 }
 ```
+
+**Note:** The `creating` hook only fills `tenant_id` when `TenantManager::initialized()` is `true`. In tests, `app(TenantManager::class)->initialize($tenant)` must be called explicitly (see "Test Conventions" below). Bare `Event::fake()` suppresses this hook (see "Test Conventions"). Every inventory model (including `InventoryLedger`) uses this trait; all inventory module migrations include a `tenant_id` column.
 
 ### TenantScope (`app/Tenancy/Scopes/TenantScope.php`)
 
@@ -713,7 +717,7 @@ class SomeController
 
 ### New Migration (Central DB)
 
-Use anonymous class, no typed properties:
+Use anonymous class, no typed properties. Runs against `souda` database by default.
 
 ```php
 <?php
@@ -741,9 +745,55 @@ return new class extends Migration
 };
 ```
 
-### New Migration (Tenant DB)
+### New Migration (Shared DB — Critical)
 
-Place in `app/Modules/BusinessType/Database/Migrations/Tenant/`:
+There are TWO kinds of shared-database migrations. Do not confuse them.
+
+**1. `database/migrations/shared/*` — core shared tables (products, brands, categories, tenant_settings, ...).**
+These use `Schema::connection('shared')` explicitly:
+
+```php
+Schema::connection('shared')->create('products', function (Blueprint $table) {
+    // ...
+});
+
+// Or for altering existing shared tables:
+Schema::connection('shared')->table('products', function (Blueprint $table) {
+    $table->integer('lead_time_days')->nullable();
+});
+```
+
+**2. Module `app/Modules/*/Database/Migrations/Tenant/*` — inventory, orders, stores, product pivot tables.**
+These use **plain `Schema::create()` — NO connection method** and add `tenant_id` as a normal column. They are routed to `souda_shared` by running the migrator with `--database=shared`, NOT by a connection call inside the file:
+
+```php
+Schema::create('inventory_warehouses', function (Blueprint $table) {
+    $table->id();
+    $table->string('tenant_id', 36);
+    // ... columns ...
+});
+```
+
+The same module migration is applied:
+- to `souda_shared` via `php artisan migrate --database=shared --path=app/Modules/{X}/Database/Migrations/Tenant --force`, AND
+- to each **dedicated** tenant DB via `config('tenancy.migration_parameters')` (`tenants:migrate`) — which is why module migrations must be connection-agnostic (plain `Schema::create()`).
+
+**Migration path and connection mapping:**
+
+| Table Type | Migration Path | How it reaches its DB |
+|---|---|---|
+| Central (users, tenants, billing) | `database/migrations/` + `database/migrations/central/` | Default connection (`mysql`) |
+| Core shared (products, brands, categories, settings) | `database/migrations/shared/` | `Schema::connection('shared')` inside the file |
+| Module tables (inventory, orders, stores, pivots) | `app/Modules/*/Database/Migrations/Tenant/` | Plain `Schema::create()` + `--database=shared` flag (or `migration_parameters` for dedicated DBs) |
+| Old product catalog (dedicated DBs only) | `database/migrations/deprecated/` | `migration_parameters` (registered in `config/tenancy.php`) |
+
+**Module migrations run on shared database** because all modules (Inventory, Order, Store, Product, Order) are registered in `config('tenancy.migration_parameters')` and in the test `RefreshMultiDatabase` shared setup, which run their `Tenant/` migration folders against `souda_shared` via the `--database=shared` flag.
+
+**Gotcha:** If you write `Schema::connection('shared')` inside a module migration, it will STILL work for shared mode but will NOT create the table on dedicated tenant DBs (it would keep writing to `souda_shared`). Keep module migrations connection-agnostic.
+
+### New Migration (Tenant DB — for Dedicated Mode)
+
+When creating migrations for future dedicated tenant databases (Enterprise plan), use normal Schema (no connection):
 
 ```php
 <?php
@@ -771,6 +821,19 @@ return new class extends Migration
     }
 };
 ```
+
+When `tenancy()->initialize($tenant)` runs for a dedicated tenant, the default connection switches to their database, so Schema defaults work correctly.
+
+### New Migration (Deprecated Folder — Dedicated DB Catalog)
+
+The `database/migrations/deprecated/` folder holds the **old Product catalog migrations** (`2026_05_21_*`: products, categories, brands, variants, warehouses, warehouse_stock, etc.). They were **moved out of `app/Modules/Product/Database/Migrations/Tenant/`** because the shared DB now owns the catalog via `database/migrations/shared/2026_06_06_000001_create_shared_product_tables.php` (these deprecated files have NO `tenant_id` column and are **not** applied to `souda_shared`).
+
+They ARE registered in `config('tenancy.migration_parameters')` so **dedicated tenant DBs** still get the `products`/`categories`/etc. tables that the Product model queries. Do NOT delete them, and do NOT run them against the shared DB.
+
+**Rule of thumb:**
+- Shared-mode tenant → catalog comes from `database/migrations/shared/`
+- Dedicated-mode tenant → catalog comes from `database/migrations/deprecated/`
+- Module tables (inventory/orders/stores) → module `Tenant/` folders, connection-agnostic
 
 ### New Frontend Component in Industry Widgets
 
@@ -911,6 +974,31 @@ php artisan test --compact --filter="{RelevantTest}"
 
 ## Critical Gotchas
 
+### Migration Connection Mismatch (Common Error)
+
+When creating **`database/migrations/shared/*`** migrations (products, categories, brands, tenant_settings), **always use `Schema::connection('shared')`**:
+
+```php
+// ✅ Correct — for database/migrations/shared/* files
+Schema::connection('shared')->create('my_table', function (Blueprint $table) {
+    // ...
+});
+
+// ❌ WRONG — creates table in 'souda' instead of 'souda_shared'
+Schema::create('my_table', function (Blueprint $table) {
+    // ...
+});
+```
+
+Common error if forgotten:
+```
+SQLSTATE[42S02]: Base table or view not found: 1146 Table 'souda.products' doesn't exist
+```
+
+This happens when a `database/migrations/shared/` ALTER migration (e.g., adding columns to `products`) runs without the connection, trying to find `products` in `souda` instead of `souda_shared`.
+
+**Note:** This rule applies ONLY to `database/migrations/shared/*`. Module migrations in `app/Modules/*/Database/Migrations/Tenant/` must use **plain** `Schema::create()` (connection-agnostic) so they work on both `souda_shared` (via `--database=shared`) and dedicated tenant DBs (via `migration_parameters`). See "New Migration (Shared DB — Critical)".
+
 ### PHP 8.4 Typed Properties in Migrations
 
 Anonymous migration classes **must not** have typed properties. The `Migration` base class declares `$connection` without a type. Using `public string $connection` will cause a fatal error. Always use `Schema::create()` directly.
@@ -928,7 +1016,7 @@ DB::table('tenant_settings')
 ### Tenant vs Central Connection
 
 - **Central models** (BusinessType, Module, User, Plan, Subscription, Payment) use `CentralConnection` trait — they query the central MySQL database
-- **Shared models** (TenantConfig, TenantModuleOverride, Task, TenantSetting) use `HasTenantScope` trait — they query `souda_shared` with `tenant_id` isolation
+- **Shared models** use `HasTenantScope` trait — they query `souda_shared` with `tenant_id` isolation: TenantConfig, TenantModuleOverride, Task, TenantSetting, **all Inventory models** (InventoryWarehouse, InventoryBalance, InventoryLedger, InventoryBatch, InventoryTransfer, InventoryCount, SerialNumber, InventoryAlert, InventoryRule, InventoryBin, CostLayer, InventoryStockReservation, InventoryPurchaseSuggestion), **Store**, **Order/OrderItem/Shipment/OrderReturn**, **Product/Category/Brand/Variant** (shared catalog)
 - **Dedicated models** (Product, Variant, Category, Brand, Warehouse, etc.) use normal Eloquent — they query the dedicated tenant DB
 
 ### Service Provider Boot Order (`bootstrap/providers.php`)
@@ -936,16 +1024,19 @@ DB::table('tenant_settings')
 ```php
 AppServiceProvider::class,         // loadMigrationsFrom('database/migrations/central')
 FortifyServiceProvider::class,     // Auth actions, Inertia views
+StoreServiceProvider::class,       // Store models, migrations
 ProductServiceProvider::class,     // Products, observers, policies
+InventoryServiceProvider::class,   // Inventory engine, services, migrations
 TenancyServiceProvider::class,     // TenantManager, middleware
 BillingServiceProvider::class,     // Billing services, gateways
 IndustryServiceProvider::class,    // Industry packs, TenantConfig
 OnboardingServiceProvider::class,  // TenantTemplates, ProvisioningPipeline
+OrderServiceProvider::class,       // Order engine, services, migrations
 ```
 
 `AppServiceProvider::boot()` calls `loadMigrationsFrom(database_path('migrations/central'))` so the `tenant_user` pivot table migration and other central migrations are available in all environments (including test).
 
-IndustryServiceProvider runs last among core providers. OnboardingServiceProvider runs last overall.
+OrderServiceProvider runs last overall.
 
 ### Shared Database Must Exist
 
@@ -953,6 +1044,90 @@ IndustryServiceProvider runs last among core providers. OnboardingServiceProvide
 mysql -u root -e "CREATE DATABASE IF NOT EXISTS souda_shared CHARACTER SET utf8mb4"
 php artisan migrate --force --database=shared --path=database/migrations/shared
 ```
+
+### Migrating Fresh (Development)
+
+Since the system has multiple databases (`souda` + `souda_shared`), use the custom command:
+
+```bash
+php artisan migrate:fresh:all
+```
+
+This drops all tables in both databases and runs migrations in the correct order:
+1. Central migrations (on `souda`)
+2. Shared migrations (on `souda_shared`): creates products, brands, categories
+3. Module migrations (on `souda_shared`): creates inventory, orders, stores tables
+
+**Do NOT use `php artisan migrate:fresh`** — it only drops the default database (`souda`), leaving `souda_shared` tables intact and causing "table already exists" errors.
+
+### Tenancy `migration_parameters` (`config/tenancy.php`)
+
+These paths run on each **dedicated** tenant DB when it is created (`tenants:migrate`), in order:
+
+```php
+'migration_parameters' => [
+    '--force' => true,
+    '--realpath' => true,
+    '--path' => [
+        database_path('migrations/tenant'),                      // empty — reserved for future dedicated-only tables
+        database_path('migrations/deprecated'),                  // old Product catalog (products, categories, ...) — NO tenant_id
+        app_path('Modules/Store/Database/Migrations/Tenant'),    // stores
+        app_path('Modules/Product/Database/Migrations/Tenant'),  // store_product / store_customer / store_warehouse pivots
+        app_path('Modules/Inventory/Database/Migrations/Tenant'),// inventory tables (have tenant_id, connection-agnostic)
+        app_path('Modules/Order/Database/Migrations/Tenant'),    // orders tables (have tenant_id, connection-agnostic)
+    ],
+],
+```
+
+**CRITICAL:** `database_path('migrations/deprecated')` is registered here so dedicated tenant DBs get the `products` table the Product module expects. Without it, dedicated-mode tests fail with `SQLSTATE[HY000]` / FK errors (`store_product_product_id_foreign`) because `products` is missing on the tenant DB. Keep `migrations/deprecated/` in this list.
+
+The same module `Tenant/` folders are ALSO applied to `souda_shared` during test setup (`tests/Support/RefreshMultiDatabase::setupSharedDatabase()`) and by `migrate:fresh:all`, using the `--database=shared` flag.
+
+### Test Conventions — Shared-Mode Factories & Initialization
+
+Inventory (and other shared-table) feature tests use **shared-mode tenants**. The factory state and initialization pattern are REQUIRED — do not replace them:
+
+**`UserFactory::sharedSubscribed()`** (`database/factories/UserFactory.php`):
+```php
+public function sharedSubscribed(): static
+{
+    return $this->state(fn () => [
+        'tenant_id' => Tenant::factory()->shared()->subscribed(),
+    ]);
+}
+```
+
+**Test setup pattern** (every shared-table test file, e.g. `tests/Feature/Inventory/*.php`):
+```php
+$this->user = User::factory()->sharedSubscribed()->create();
+
+tenancy()->initialize($this->user->tenant);
+app(TenantManager::class)->initialize($this->user->tenant);   // REQUIRED
+```
+
+- `User::factory()->subscribed()` = dedicated tenant DB (`tenancy_mode = 'dedicated'`).
+- `User::factory()->sharedSubscribed()` = shared tenant (`Tenant::factory()->shared()->subscribed()`), data lands in `souda_shared`.
+- The `app(TenantManager::class)->initialize(...)` call is what sets `TenantManager::initialized()`, which the `HasTenantScope` `creating` hook checks to auto-fill `tenant_id`. `tenancy()->initialize()` alone is NOT sufficient for shared mode.
+
+**Data isolation:** `tests/Support/RefreshMultiDatabase::setupSharedDatabase()` now truncates **ALL** tables in `souda_shared` between tests (not just `tenant_settings`/`tasks`). This prevents cross-test data leakage (slug collisions, wrong `assertDatabaseCount`). If you add a new shared table, no extra truncation setup is needed.
+
+**`Event::fake()` must be scoped.** `Event::fake()` with no args swaps Eloquent's model event dispatcher, so `HasTenantScope::creating` never fires and inserts fail with `Field 'tenant_id' doesn't have a default value`. Always scope to the events you assert:
+```php
+// WRONG — model events get faked, tenant_id never set:
+Event::fake();
+
+// CORRECT — only the asserted event is faked; model events still fire:
+Event::fake([TransferInitiated::class]);
+```
+The same rule applies to model observers/events registered in `bootHasTenantScope` — never use a bare `Event::fake()` in a shared-table test.
+
+### Duplicate Migration Detection
+
+Before creating module migrations, check if the table already exists in shared migrations:
+- `database/migrations/shared/` — shared tables (products, categories, brands, etc.)
+- `app/Modules/*/Database/Migrations/Tenant/` — module-specific tables
+
+If a table is in `database/migrations/shared/`, do NOT create a duplicate migration in module folders. Remove duplicates by moving to `database/migrations/deprecated/`.
 
 ### Cache Invalidation
 
@@ -1122,19 +1297,66 @@ social_accounts         — user_id, provider, provider_user_id
 
 ```
 stores                  — id (ULID), tenant_id, name, slug, code, timezone, currency, status, is_default, ...
-tenant_settings         — id, tenant_id, timezone, locale, currency, logo, ...
+                         UNIQUE (tenant_id, slug), UNIQUE (tenant_id, code)
+brands                  — id, tenant_id, name, slug, logo, is_active, ...
+                         UNIQUE (tenant_id, slug)
+categories              — id, tenant_id, parent_id, name, slug, materialized_path, depth, ...
+                         UNIQUE (tenant_id, slug)
+products                — id (ULID), tenant_id, category_id, brand_id, name, slug, sku, base_price, status, ...
+                         UNIQUE (tenant_id, slug)  [from database/migrations/shared/2026_06_06_000001...]
+variants                — id (ULID), tenant_id, product_id, sku, name, price, track_inventory, ...
+warehouses              — id, tenant_id, name, code, address, is_active, is_default, ...
+warehouse_stock         — id, tenant_id, warehouse_id, product_id, variant_id, quantity, reserved, ...
+stock_movements         — id (ULID), tenant_id, warehouse_id, product_id, variant_id, movement_type, quantity, ...
+stock_reservations      — id, tenant_id, product_id, warehouse_id, quantity, status, ...
+attributes / attribute_values / tax_categories / tax_rates / product_attribute_values /
+product_attribute_text_values / variant_attribute_values / product_media / category_product /
+pricing_rules / audit_logs — shared catalog support tables, all with tenant_id
+orders                  — id (ULID), tenant_id, store_id, order_number, customer_id, status, grand_total, ...
+order_items             — id (ULID), tenant_id, order_id, product_id, variant_id, quantity, unit_price, ...
+shipments               — id (ULID), tenant_id, order_id, shipment_number, courier, tracking_number, status, ...
+inventory_warehouses    — id, tenant_id, name, slug, type, address, is_active, is_default, ...
+                         ⚠️ GLOBAL UNIQUE (slug) — NOT composite; relies on test truncation to avoid collisions
+inventory_bins          — id, tenant_id, warehouse_id, code, zone, aisle, rack, shelf, ...
+inventory_transfers     — id, tenant_id, from_warehouse_id, to_warehouse_id, status, reference, ...
+                         ⚠️ GLOBAL UNIQUE (reference)
+inventory_counts        — id, tenant_id, warehouse_id, reference, type, status, counted_by, ...
+                         ⚠️ GLOBAL UNIQUE (reference)
+inventory_ledger        — id, tenant_id, product_id, warehouse_id, quantity, movement_type, reference, ...
+inventory_balances      — id, tenant_id, product_id, warehouse_id, quantity, average_unit_cost, ...
+inventory_batches       — id, tenant_id, product_id, batch_no, received_at, expires_at, ...
+inventory_alerts        — id, tenant_id, product_id, type, threshold, status, ...
+inventory_rules         — id, tenant_id, product_id, rule_type, config, ...
+inventory_purchase_suggestions — id, tenant_id, product_id, suggested_qty, status, ...
+cost_layers             — id, tenant_id, inventory_balance_id, layer_type, quantity, unit_cost, ...
+inventory_stock_reservations   — id, tenant_id, product_id, quantity, status, expires_at, ...
+inventory_count_items   — id, tenant_id, count_id, product_id, expected_qty, counted_qty, ...
+inventory_transfer_items — id, tenant_id, transfer_id, product_id, quantity, ...
+serial_numbers          — id, tenant_id, product_id, serial_number, status, warehouse_id, batch_id, ...
+tenant_settings         — id, tenant_id, timezone, locale, currency, logo, brand_primary_color,
+                          brand_accent_color, brand_logo_url, ...
 tasks                   — id, tenant_id, title, description, is_completed
 tenant_configs          — id, tenant_id, business_type_slug, config (JSON), config_hash
 tenant_module_overrides — id, tenant_id, module_slug, is_enabled, settings (JSON)
+tenant_stores_products / pivots (store_product, store_customer, store_warehouse) — tenant_id + store_id + related id
 ```
 
-Shared DB migration paths in `tests/Support/RefreshMultiDatabase.php`:
-- `database/migrations/shared/` — settings, product tables, business type tables
-- `app/Modules/Store/Database/Migrations/Tenant/` — stores table (module tenant migration run against shared DB)
+**Catalog & uniqueness convention:** shared-mode catalog tables (`products`, `categories`, `brands`, `stores`) are created by `database/migrations/shared/2026_06_06_000001_create_shared_product_tables.php` and use **composite `UNIQUE (tenant_id, slug)`** (constraint names `uq_brands_tenant_slug`, `uq_categories_tenant_slug`). The inventory module kept **global unique indexes** on `inventory_warehouses.slug`, `inventory_transfers.reference`, `inventory_counts.reference` — safe only because `RefreshMultiDatabase` truncates all shared tables between tests. Prefer composite `(tenant_id, slug)` for new shared tables.
+
+**Migration paths for shared DB:**
+- `database/migrations/shared/` — core shared tables: `2026_06_05_000001` (tasks, tenant_settings), `2026_06_06_000001` (FULL catalog: brands, categories, attributes, attribute_values, tax_categories, tax_rates, warehouses, products, category_product, product_attribute_values, product_attribute_text_values, variants, variant_attribute_values, product_media, warehouse_stock, stock_reservations, stock_movements, audit_logs, pricing_rules), `2026_06_20_000001` (tenant_configs, tenant_module_overrides), `2026_08_01_000001` (branding on tenant_settings) — all use `Schema::connection('shared')`
+- `app/Modules/Inventory/Database/Migrations/Tenant/` — inventory tables (ledger, balances, batches, counts, transfers, warehouses, bins, serials, alerts, rules) — plain `Schema::create()`
+- `app/Modules/Order/Database/Migrations/Tenant/` — order tables (orders, items, shipments, status histories, returns, number sequences) — plain `Schema::create()`
+- `app/Modules/Store/Database/Migrations/Tenant/` — store tables (stores, store pivots) — plain `Schema::create()`
+
+**Deprecated product catalog** (`database/migrations/deprecated/2026_05_21_*`) holds the **legacy no-`tenant_id` versions** of the catalog tables (products, categories, brands, variants, warehouses, warehouse_stock, stock_movements, stock_reservations, product_media, attributes, attribute_values, product_attribute_values, pricing_rules, tax_categories, tax_rates, audit_logs). They are NOT applied to `souda_shared`; they run only on **dedicated tenant DBs** via `migration_parameters`.
 
 ### Dedicated (per-tenant) — Key Tables
 
-products, variants, categories, brands, warehouses, warehouse_stock, stock_movements, stock_reservations, product_media, attributes, attribute_values, product_attribute_values, pricing_rules, tax_categories, tax_rates, audit_logs + shared tables copied on upgrade.
+**Currently: tables are in `souda_shared` (shared database)** for Free/Starter/Professional plans.
+
+**Future (Enterprise):** Each tenant gets `souda_tenant_{uuid}` database with:
+products, variants, categories, brands, warehouses, warehouse_stock, stock_movements, stock_reservations, product_media, attributes, attribute_values, product_attribute_values, pricing_rules, tax_categories, tax_rates, audit_logs + orders, inventory, stores tables.
 
 ---
 

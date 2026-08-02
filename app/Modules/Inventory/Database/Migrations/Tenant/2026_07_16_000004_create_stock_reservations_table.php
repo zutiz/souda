@@ -12,6 +12,7 @@ return new class extends Migration
     {
         Schema::create('inventory_stock_reservations', function (Blueprint $table) {
             $table->id();
+            $table->string('tenant_id', 36);
             $table->ulid('product_id');
             $table->ulid('variant_id')->nullable();
             $table->unsignedBigInteger('warehouse_id');

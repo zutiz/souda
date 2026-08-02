@@ -17,6 +17,7 @@ readonly class TenantConfig
         public array $reportDefinitions,
         public array $workflows,
         public array $settings,
+        public array $branding = [],
     ) {}
 
     public function hasModule(string $module): bool
@@ -53,6 +54,7 @@ readonly class TenantConfig
             'report_definitions' => $this->reportDefinitions,
             'workflows' => $this->workflows,
             'settings' => $this->settings,
+            'branding' => $this->branding,
         ];
     }
 
@@ -69,6 +71,32 @@ readonly class TenantConfig
             reportDefinitions: $data['report_definitions'] ?? [],
             workflows: $data['workflows'] ?? [],
             settings: $data['settings'] ?? [],
+            branding: $data['branding'] ?? [],
         );
+    }
+
+    public function getPrimaryColor(): ?string
+    {
+        return $this->branding['primary'] ?? null;
+    }
+
+    public function getAccentColor(): ?string
+    {
+        return $this->branding['accent'] ?? null;
+    }
+
+    public function getSidebarAccentColor(): ?string
+    {
+        return $this->branding['sidebar_accent'] ?? null;
+    }
+
+    public function getSidebarPrimaryColor(): ?string
+    {
+        return $this->branding['sidebar_primary'] ?? null;
+    }
+
+    public function getBrandLogoUrl(): ?string
+    {
+        return $this->branding['logo_url'] ?? null;
     }
 }

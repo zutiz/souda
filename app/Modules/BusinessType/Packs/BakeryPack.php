@@ -129,6 +129,20 @@ class BakeryPack implements IndustryPack
         ];
     }
 
+    public function branding(): array
+    {
+        return [
+            'primary' => 'oklch(0.70 0.15 70)',      // Warm gold
+            'primary_foreground' => 'oklch(0.985 0 0)',
+            'accent' => 'oklch(0.96 0.06 60)',       // Cream
+            'accent_foreground' => 'oklch(0.205 0 0)',
+            'sidebar' => 'oklch(0.97 0.04 70)',
+            'sidebar_foreground' => 'oklch(0.205 0 0)',
+            'sidebar_accent' => 'oklch(0.92 0.05 70)',
+            'radius' => '0.75rem',
+        ];
+    }
+
     public function onTenantAssigned(Tenant $tenant): void {}
 
     public function onTenantRemoved(Tenant $tenant): void {}

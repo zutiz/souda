@@ -115,7 +115,8 @@ export default function ShowCount() {
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title={`Count ${count.reference}`} />
 
-            <PageHeader title={`Count ${count.reference}`} description={`${count.type} count — ${count.warehouse.name}`}>
+            <div className="flex h-full flex-1 flex-col gap-6 overflow-x-auto p-4 lg:p-6">
+                <PageHeader title={`Count ${count.reference}`} description={`${count.type} count — ${count.warehouse.name}`}>
                 {canVerify && <Button onClick={handleVerify}>Verify Count</Button>}
                 {isVerified && <Button onClick={handleApply}>Apply Adjustments</Button>}
                 {isAdjusted && <Button onClick={handleComplete}>Complete Count</Button>}
@@ -216,6 +217,7 @@ export default function ShowCount() {
                         </Button>
                     )}
                 </div>
+            </div>
             </div>
         </AppLayout>
     );

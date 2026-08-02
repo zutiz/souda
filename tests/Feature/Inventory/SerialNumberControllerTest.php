@@ -5,13 +5,15 @@ declare(strict_types=1);
 use App\Http\Middleware\EnsureTenantHasSubscription;
 use App\Http\Middleware\InitializeTenancyByUser;
 use App\Models\User;
+use App\Tenancy\TenantManager;
 use App\Modules\Inventory\Models\SerialNumber;
 use App\Modules\Inventory\Models\Warehouse;
 use App\Modules\Product\Models\Product;
 
 beforeEach(function () {
-    $this->user = User::factory()->subscribed()->create();
+    $this->user = User::factory()->sharedSubscribed()->create();
     tenancy()->initialize($this->user->tenant);
+    app(TenantManager::class)->initialize($this->user->tenant);
 
     $this->withoutMiddleware([
         InitializeTenancyByUser::class,
@@ -114,7 +116,7 @@ test('user can mark a serial as sold', function () {
 test('mark sold requires order_reference', function () {
     $serial = SerialNumber::factory()->create();
 
-    $response = $this->post(route('inventory.serials.mark-sold', $serial), []);
+    $response = $this->postJson(route('inventory.serials.mark-sold', $serial), []);
 
     $response->assertStatus(422);
 });

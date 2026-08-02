@@ -49,7 +49,8 @@ export default function ShowWarehouse() {
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title={warehouse.name} />
 
-            <PageHeader title={warehouse.name} description={warehouse.code ?? ''} />
+            <div className="flex h-full flex-1 flex-col gap-6 overflow-x-auto p-4 lg:p-6">
+                <PageHeader title={warehouse.name} description={warehouse.code ?? ''} />
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <div className="lg:col-span-2 space-y-6">
@@ -94,6 +95,7 @@ export default function ShowWarehouse() {
                         <DetailRow label="Status" value={warehouse.is_active ? 'Active' : 'Inactive'} />
                     </div>
                 </div>
+            </div>
             </div>
         </AppLayout>
     );

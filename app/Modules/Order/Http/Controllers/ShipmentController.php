@@ -24,12 +24,12 @@ class ShipmentController
         protected FulfillmentService $fulfillmentService,
     ) {}
 
-    public function index(Order $order): Response
+    public function index(?Order $order = null): Response
     {
-        $shipments = $this->shipmentService->listShipments($order->id);
+        $shipments = $this->shipmentService->listShipments($order?->id);
 
         return Inertia::render('Order/Shipments/Index', [
-            'order' => $order->toArray(),
+            'order' => $order?->toArray(),
             'shipments' => $shipments,
         ]);
     }

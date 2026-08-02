@@ -10,6 +10,7 @@ return new class extends Migration
     {
         Schema::create('inventory_rules', function (Blueprint $table) {
             $table->id();
+            $table->string('tenant_id', 36);
             $table->string('name');
             $table->text('description')->nullable();
             $table->string('condition_type');

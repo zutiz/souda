@@ -43,7 +43,8 @@ export default function InventoryIndex() {
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Inventory Balances" />
 
-            <PageHeader title="Balances" description="Current stock levels across all warehouses" />
+            <div className="flex h-full flex-1 flex-col gap-6 overflow-x-auto p-4 lg:p-6">
+                <PageHeader title="Balances" description="Current stock levels across all warehouses" />
 
             <div className="rounded-lg border border-sidebar-border">
                 <table className="w-full">
@@ -89,6 +90,7 @@ export default function InventoryIndex() {
                 perPage={balances.per_page}
                 total={balances.total}
             />
+            </div>
         </AppLayout>
     );
 }

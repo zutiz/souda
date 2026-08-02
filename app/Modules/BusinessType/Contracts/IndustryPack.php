@@ -30,6 +30,8 @@ interface IndustryPack
 
     public function featureFlags(): array;
 
+    public function branding(): array;
+
     public function onTenantAssigned(Tenant $tenant): void;
 
     public function onTenantRemoved(Tenant $tenant): void;

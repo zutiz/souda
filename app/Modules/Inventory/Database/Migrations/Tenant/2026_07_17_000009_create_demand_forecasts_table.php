@@ -10,6 +10,7 @@ return new class extends Migration
     {
         Schema::create('demand_forecasts', function (Blueprint $table) {
             $table->id();
+            $table->string('tenant_id', 36);
             $table->string('product_id');
             $table->unsignedBigInteger('warehouse_id');
             $table->date('forecast_date');

@@ -216,6 +216,20 @@ class ElectronicsPack implements IndustryPack
         ];
     }
 
+    public function branding(): array
+    {
+        return [
+            'primary' => 'oklch(0.55 0.18 250)',     // Tech blue
+            'primary_foreground' => 'oklch(0.985 0 0)',
+            'accent' => 'oklch(0.20 0.08 250)',      // Dark accent
+            'accent_foreground' => 'oklch(0.985 0 0)',
+            'sidebar' => 'oklch(0.18 0 0)',
+            'sidebar_foreground' => 'oklch(0.985 0 0)',
+            'sidebar_accent' => 'oklch(0.30 0.08 250)',
+            'radius' => '0.375rem',                  // Sharp, tech
+        ];
+    }
+
     public function onTenantAssigned(Tenant $tenant): void {}
 
     public function onTenantRemoved(Tenant $tenant): void {}

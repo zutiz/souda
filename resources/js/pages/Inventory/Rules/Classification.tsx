@@ -94,7 +94,8 @@ export default function Classification() {
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Stock Classification" />
 
-            <PageHeader title="Stock Classification" description="ABC value analysis and velocity classification">
+            <div className="flex h-full flex-1 flex-col gap-6 overflow-x-auto p-4 lg:p-6">
+                <PageHeader title="Stock Classification" description="ABC value analysis and velocity classification">
                 <Button onClick={refreshClassification}>Refresh Classification</Button>
             </PageHeader>
 
@@ -243,6 +244,7 @@ export default function Classification() {
                 perPage={balances.per_page}
                 total={balances.total}
             />
+            </div>
         </AppLayout>
     );
 }

@@ -57,7 +57,8 @@ export default function SerialShow() {
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title={`Serial ${serial.serial_number}`} />
 
-            <div className="mb-4 flex items-center justify-between">
+            <div className="flex h-full flex-1 flex-col gap-6 overflow-x-auto p-4 lg:p-6">
+                <div className="mb-4 flex items-center justify-between">
                 <PageHeader title={`Serial ${serial.serial_number}`} description={serial.product?.name ?? '-'} />
                 <div className="flex gap-2">
                     {serial.status === 'available' && (
@@ -122,6 +123,7 @@ export default function SerialShow() {
                     <p className="mt-1 text-sm">{serial.notes}</p>
                 </div>
             )}
+            </div>
         </AppLayout>
     );
 }

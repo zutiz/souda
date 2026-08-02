@@ -39,7 +39,8 @@ export default function WarehouseIndex() {
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Warehouses" />
 
-            <PageHeader title="Warehouses" description="Manage inventory warehouses" />
+            <div className="flex h-full flex-1 flex-col gap-6 overflow-x-auto p-4 lg:p-6">
+                <PageHeader title="Warehouses" description="Manage inventory warehouses" />
 
             <div className="rounded-lg border border-sidebar-border">
                 <table className="w-full">
@@ -92,6 +93,7 @@ export default function WarehouseIndex() {
                 perPage={warehouses.per_page}
                 total={warehouses.total}
             />
+            </div>
         </AppLayout>
     );
 }

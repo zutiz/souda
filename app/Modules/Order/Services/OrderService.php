@@ -168,9 +168,13 @@ class OrderService
         return $dto;
     }
 
-    public function listOrders(string $storeId, array $filters = []): array
+    public function listOrders(?string $storeId, array $filters = []): array
     {
-        $query = Order::with(['items'])->where('store_id', $storeId);
+        $query = Order::with(['items']);
+
+        if (! empty($storeId)) {
+            $query->where('store_id', $storeId);
+        }
 
         if (! empty($filters['status'])) {
             $query->where('status', $filters['status']);

@@ -136,6 +136,20 @@ class SpaPack implements IndustryPack
         ];
     }
 
+    public function branding(): array
+    {
+        return [
+            'primary' => 'oklch(0.60 0.12 200)',     // Calming teal
+            'primary_foreground' => 'oklch(0.985 0 0)',
+            'accent' => 'oklch(0.94 0.05 200)',      // Light teal
+            'accent_foreground' => 'oklch(0.205 0 0)',
+            'sidebar' => 'oklch(0.96 0.03 200)',
+            'sidebar_foreground' => 'oklch(0.205 0 0)',
+            'sidebar_accent' => 'oklch(0.92 0.04 200)',
+            'radius' => '1rem',                      // Soft, calming
+        ];
+    }
+
     public function onTenantAssigned(Tenant $tenant): void {}
 
     public function onTenantRemoved(Tenant $tenant): void {}

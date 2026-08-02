@@ -213,6 +213,20 @@ class FashionPack implements IndustryPack
         ];
     }
 
+    public function branding(): array
+    {
+        return [
+            'primary' => 'oklch(0.15 0 0)',          // Black elegant
+            'primary_foreground' => 'oklch(0.985 0 0)',
+            'accent' => 'oklch(0.60 0.02 0)',        // Warm gray
+            'accent_foreground' => 'oklch(0.985 0 0)',
+            'sidebar' => 'oklch(0.22 0 0)',
+            'sidebar_foreground' => 'oklch(0.985 0 0)',
+            'sidebar_accent' => 'oklch(0.35 0 0)',
+            'radius' => '0.375rem',                  // Sharp, minimal
+        ];
+    }
+
     public function onTenantAssigned(Tenant $tenant): void {}
 
     public function onTenantRemoved(Tenant $tenant): void {}

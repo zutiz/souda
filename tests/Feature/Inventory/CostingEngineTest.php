@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Models\User;
+use App\Tenancy\TenantManager;
 use App\Modules\Inventory\Exceptions\CostingMethodNotSupportedException;
 use App\Modules\Inventory\Models\CostLayer;
 use App\Modules\Inventory\Models\InventoryBalance;
@@ -12,9 +13,10 @@ use App\Modules\Product\Models\Product;
 use App\Modules\Product\Models\Warehouse;
 
 beforeEach(function () {
-    $this->user = User::factory()->subscribed()->create();
+    $this->user = User::factory()->sharedSubscribed()->create();
 
     tenancy()->initialize($this->user->tenant);
+    app(TenantManager::class)->initialize($this->user->tenant);
 
     $this->product = Product::factory()->create();
     $this->warehouse = Warehouse::factory()->create();

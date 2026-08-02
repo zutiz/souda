@@ -1,37 +1,52 @@
+import { Badge } from '@/components/ui/badge';
+import { cn } from '@/lib/utils';
+
 type StatusBadgeProps = {
     status: string;
     size?: 'sm' | 'md';
 };
 
-const statusColors: Record<string, string> = {
-    pending: 'bg-yellow-100 text-yellow-800',
-    confirmed: 'bg-blue-100 text-blue-800',
-    processing: 'bg-indigo-100 text-indigo-800',
-    ready_for_pickup: 'bg-purple-100 text-purple-800',
-    out_for_delivery: 'bg-orange-100 text-orange-800',
-    partially_shipped: 'bg-cyan-100 text-cyan-800',
-    shipped: 'bg-cyan-100 text-cyan-800',
-    delivered: 'bg-green-100 text-green-800',
-    completed: 'bg-green-100 text-green-800',
-    cancelled: 'bg-red-100 text-red-800',
-    refunded: 'bg-gray-100 text-gray-800',
-    partially_refunded: 'bg-gray-100 text-gray-800',
-    on_hold: 'bg-slate-100 text-slate-800',
-    failed: 'bg-red-100 text-red-800',
-    label_created: 'bg-blue-100 text-blue-800',
-    picked_up: 'bg-indigo-100 text-indigo-800',
-    in_transit: 'bg-purple-100 text-purple-800',
-    out_for_delivery: 'bg-orange-100 text-orange-800',
-    delivery_failed: 'bg-red-100 text-red-800',
-    returned_to_sender: 'bg-gray-100 text-gray-800',
+type StatusStyle = {
+    bg: string;
+    text: string;
+};
+
+const statusStyles: Record<string, StatusStyle> = {
+    pending: { bg: 'bg-warning/10', text: 'text-warning' },
+    confirmed: { bg: 'bg-info/10', text: 'text-info' },
+    processing: { bg: 'bg-info/10', text: 'text-info' },
+    ready_for_pickup: { bg: 'bg-primary/10', text: 'text-primary' },
+    out_for_delivery: { bg: 'bg-warning/10', text: 'text-warning' },
+    partially_shipped: { bg: 'bg-info/10', text: 'text-info' },
+    shipped: { bg: 'bg-info/10', text: 'text-info' },
+    delivered: { bg: 'bg-positive/10', text: 'text-positive' },
+    completed: { bg: 'bg-positive/10', text: 'text-positive' },
+    cancelled: { bg: 'bg-destructive/10', text: 'text-destructive' },
+    refunded: { bg: 'bg-muted', text: 'text-muted-foreground' },
+    partially_refunded: { bg: 'bg-muted', text: 'text-muted-foreground' },
+    on_hold: { bg: 'bg-muted', text: 'text-muted-foreground' },
+    failed: { bg: 'bg-destructive/10', text: 'text-destructive' },
+    label_created: { bg: 'bg-info/10', text: 'text-info' },
+    picked_up: { bg: 'bg-info/10', text: 'text-info' },
+    in_transit: { bg: 'bg-primary/10', text: 'text-primary' },
+    delivery_failed: { bg: 'bg-destructive/10', text: 'text-destructive' },
+    returned_to_sender: { bg: 'bg-muted', text: 'text-muted-foreground' },
 };
 
 export function StatusBadge({ status, size = 'md' }: StatusBadgeProps) {
-    const sizeClass = size === 'sm' ? 'px-2 py-0.5 text-xs' : 'px-2.5 py-1 text-sm';
+    const style = statusStyles[status];
+    const defaultStyle: StatusStyle = { bg: 'bg-muted', text: 'text-muted-foreground' };
 
     return (
-        <span className={`inline-flex rounded-full font-medium ${sizeClass} ${statusColors[status] || 'bg-gray-100 text-gray-800'}`}>
+        <Badge
+            variant="outline"
+            className={cn(
+                'rounded-full font-medium capitalize',
+                style?.bg,
+                style?.text,
+            )}
+        >
             {status.replace(/_/g, ' ')}
-        </span>
+        </Badge>
     );
 }

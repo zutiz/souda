@@ -64,7 +64,8 @@ export default function ShowTransfer() {
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title={`Transfer ${transfer.reference}`} />
 
-            <PageHeader title={`Transfer ${transfer.reference}`} description={transfer.description ?? ''}>
+            <div className="flex h-full flex-1 flex-col gap-6 overflow-x-auto p-4 lg:p-6">
+                <PageHeader title={`Transfer ${transfer.reference}`} description={transfer.description ?? ''}>
                 {canSend && <Button onClick={handleSend}>Send Transfer</Button>}
                 {canReceive && <Button onClick={handleReceive}>Receive Transfer</Button>}
                 {canCancel && <Button variant="outline" onClick={handleCancel}>Cancel Transfer</Button>}
@@ -106,6 +107,7 @@ export default function ShowTransfer() {
 
                     <StatusBadge status={transfer.status} />
                 </div>
+            </div>
             </div>
         </AppLayout>
     );

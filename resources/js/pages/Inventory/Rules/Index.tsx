@@ -62,7 +62,8 @@ export default function RulesIndex() {
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Automation Rules" />
 
-            <PageHeader title="Automation Rules" description="IF-THEN rules for inventory automation">
+            <div className="flex h-full flex-1 flex-col gap-6 overflow-x-auto p-4 lg:p-6">
+                <PageHeader title="Automation Rules" description="IF-THEN rules for inventory automation">
                 <Link href="/inventory/rules/create">
                     <Button>New Rule</Button>
                 </Link>
@@ -132,6 +133,7 @@ export default function RulesIndex() {
                 perPage={rules.per_page}
                 total={rules.total}
             />
+            </div>
         </AppLayout>
     );
 }

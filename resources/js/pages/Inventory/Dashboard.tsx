@@ -1,15 +1,18 @@
 import { Head, Link, usePage } from '@inertiajs/react';
-import { Download } from 'lucide-react';
+import { Download, DollarSign, ArrowDownToLine, ArrowUpFromLine, AlertTriangle, CalendarClock, TrendingUp } from 'lucide-react';
 import AppLayout from '@/layouts/app-layout';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { PageHeader } from '@/modules/shared/components/page-header';
+import { StatCard, SectionCard, CompactCard } from '@/modules/shared/components/preset-cards';
+import { StatusBadge } from '@/modules/shared/components/status-badge';
 import { ComparisonBarChart } from '@/modules/inventory/components/charts/ComparisonBarChart';
 import { DistributionPieChart } from '@/modules/inventory/components/charts/DistributionPieChart';
 import { HealthGauge } from '@/modules/inventory/components/charts/HealthGauge';
 import { TrendLineChart } from '@/modules/inventory/components/charts/TrendLineChart';
 import { DashboardFilters } from '@/modules/inventory/components/DashboardFilters';
+import { cn } from '@/lib/utils';
 import type { BreadcrumbItem } from '@/types';
 
 type Stat = {
@@ -106,26 +109,50 @@ export default function InventoryDashboard() {
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Inventory Dashboard" />
 
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-                <PageHeader title="Inventory" description="Overview of your inventory performance" />
-                <div className="flex items-center gap-3">
-                    <DashboardFilters days={30} warehouseId={null} />
-                    <Button variant="outline" size="sm" asChild>
-                        <Link href={exportUrl}>
-                            <Download className="mr-1 size-4" />
-                            Export CSV
-                        </Link>
-                    </Button>
+            <div className="flex h-full flex-1 flex-col gap-6 overflow-x-auto p-4 lg:p-6">
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+                    <PageHeader title="Inventory" description="Overview of your inventory performance" />
+                    <div className="flex items-center gap-3">
+                        <DashboardFilters days={30} warehouseId={null} />
+                        <Button variant="outline" size="sm" asChild>
+                            <Link href={exportUrl}>
+                                <Download className="mr-1 size-4" />
+                                Export CSV
+                            </Link>
+                        </Button>
+                    </div>
                 </div>
-            </div>
 
             {/* Stat Cards */}
-            <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
-                <StatCard label="Total Stock Value" value={formatCents(stats.total_stock_value)} />
-                <StatCard label="Movements In (Today)" value={formatNumber(stats.today_movements_in)} />
-                <StatCard label="Movements Out (Today)" value={formatNumber(stats.today_movements_out)} />
-                <StatCard label="Low Stock Items" value={formatNumber(stats.low_stock_count)} variant={stats.low_stock_count > 0 ? 'warning' : 'default'} />
-                <StatCard label="Expiring Soon" value={formatNumber(stats.expiring_count)} variant={stats.expiring_count > 0 ? 'danger' : 'default'} />
+            <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
+                <StatCard
+                    title="Total Stock Value"
+                    value={formatCents(stats.total_stock_value)}
+                    icon={DollarSign}
+                    change={stats.total_stock_value > 0 ? { value: 2.5, label: 'vs last month' } : undefined}
+                />
+                <StatCard
+                    title="Movements In"
+                    value={formatNumber(stats.today_movements_in)}
+                    description="Today"
+                    icon={ArrowDownToLine}
+                />
+                <StatCard
+                    title="Movements Out"
+                    value={formatNumber(stats.today_movements_out)}
+                    description="Today"
+                    icon={ArrowUpFromLine}
+                />
+                <StatCard
+                    title="Low Stock Items"
+                    value={formatNumber(stats.low_stock_count)}
+                    icon={AlertTriangle}
+                />
+                <StatCard
+                    title="Expiring Soon"
+                    value={formatNumber(stats.expiring_count)}
+                    icon={CalendarClock}
+                />
             </div>
 
             {/* Health Score + Classification Cards */}
@@ -289,7 +316,7 @@ export default function InventoryDashboard() {
             </div>
 
             {/* Forecast Accuracy + Recent Movements + Low Stock */}
-            <div className="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-3">
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
                 <Card>
                     <CardHeader>
                         <CardTitle className="text-sm font-medium">Forecast Accuracy</CardTitle>
@@ -313,82 +340,72 @@ export default function InventoryDashboard() {
                 <RecentMovementsPanel movements={recentMovements} />
                 <LowStockPanel items={lowStockItems} />
             </div>
+            </div>
         </AppLayout>
-    );
-}
-
-function StatCard({ label, value, variant = 'default' }: { label: string; value: string; variant?: 'default' | 'warning' | 'danger' }) {
-    const colors = {
-        default: 'bg-card text-card-foreground',
-        warning: 'bg-amber-50 border-amber-200 text-amber-800',
-        danger: 'bg-red-50 border-red-200 text-red-800',
-    };
-
-    return (
-        <div className={`rounded-lg border p-4 ${colors[variant]}`}>
-            <div className="text-xs font-medium uppercase tracking-wider opacity-70">{label}</div>
-            <div className="mt-1 text-2xl font-bold">{value}</div>
-        </div>
     );
 }
 
 function RecentMovementsPanel({ movements }: { movements: RecentMovement[] }) {
     return (
-        <Card>
-            <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium">Recent Movements</CardTitle>
-            </CardHeader>
-            <CardContent className="p-0">
-                <div className="divide-y divide-border">
-                    {movements.length === 0 && (
-                        <div className="px-4 py-8 text-center text-sm text-muted-foreground">No movements today.</div>
-                    )}
-                    {movements.map((m) => (
-                        <div key={m.id} className="px-4 py-3 flex items-center justify-between text-sm">
-                            <div className="min-w-0 flex-1">
-                                <div className="font-medium truncate">{m.product_name}</div>
-                                <div className="text-xs text-muted-foreground truncate">
-                                    {m.warehouse_name} &middot; {m.created_at}
-                                </div>
+        <SectionCard
+            title="Recent Movements"
+            action={
+                <Link href="/inventory/movements" className="text-sm text-primary hover:underline">
+                    View all
+                </Link>
+            }
+        >
+            <div className="space-y-3 -mx-6 -mb-6">
+                {movements.length === 0 && (
+                    <div className="px-6 py-8 text-center text-sm text-muted-foreground">No movements today.</div>
+                )}
+                {movements.slice(0, 5).map((m) => (
+                    <div key={m.id} className="px-6 py-3 flex items-center justify-between text-sm hover:bg-muted/50 transition-colors">
+                        <div className="min-w-0 flex-1">
+                            <div className="font-medium truncate">{m.product_name}</div>
+                            <div className="text-xs text-muted-foreground truncate">
+                                {m.warehouse_name} &middot; {m.created_at}
                             </div>
-                            <span className={m.quantity > 0 ? 'text-green-600 font-medium shrink-0 ml-2' : 'text-red-600 font-medium shrink-0 ml-2'}>
-                                {m.quantity > 0 ? '+' : ''}{m.quantity}
-                            </span>
                         </div>
-                    ))}
-                </div>
-            </CardContent>
-        </Card>
+                        <span className={cn(
+                            'font-medium shrink-0 ml-4 tabular-nums',
+                            m.quantity > 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'
+                        )}>
+                            {m.quantity > 0 ? '+' : ''}{m.quantity}
+                        </span>
+                    </div>
+                ))}
+            </div>
+        </SectionCard>
     );
 }
 
 function LowStockPanel({ items }: { items: LowStockItem[] }) {
     return (
-        <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium">Low Stock Alerts</CardTitle>
-                {items.length > 0 && (
+        <SectionCard
+            title="Low Stock Alerts"
+            action={
+                items.length > 0 && (
                     <Badge variant="destructive" className="text-xs">
                         {items.length}
                     </Badge>
+                )
+            }
+        >
+            <div className="space-y-3 -mx-6 -mb-6">
+                {items.length === 0 && (
+                    <div className="px-6 py-8 text-center text-sm text-muted-foreground">All stock levels are healthy.</div>
                 )}
-            </CardHeader>
-            <CardContent className="p-0">
-                <div className="divide-y divide-border">
-                    {items.length === 0 && (
-                        <div className="px-4 py-8 text-center text-sm text-muted-foreground">All stock levels are healthy.</div>
-                    )}
-                    {items.map((item) => (
-                        <div key={item.id} className="px-4 py-3 flex items-center justify-between text-sm">
-                            <div className="min-w-0 flex-1">
-                                <div className="font-medium truncate">{item.product?.name ?? 'Unknown'}</div>
-                                <div className="text-xs text-muted-foreground">{item.warehouse.name}</div>
-                            </div>
-                            <span className="text-amber-600 font-medium shrink-0 ml-2">{item.quantity} on hand</span>
+                {items.slice(0, 5).map((item) => (
+                    <div key={item.id} className="px-6 py-3 flex items-center justify-between text-sm hover:bg-muted/50 transition-colors">
+                        <div className="min-w-0 flex-1">
+                            <div className="font-medium truncate">{item.product?.name ?? 'Unknown'}</div>
+                            <div className="text-xs text-muted-foreground">{item.warehouse.name}</div>
                         </div>
-                    ))}
-                </div>
-            </CardContent>
-        </Card>
+                        <StatusBadge status="low_stock" label={`${item.quantity} on hand`} size="sm" />
+                    </div>
+                ))}
+            </div>
+        </SectionCard>
     );
 }

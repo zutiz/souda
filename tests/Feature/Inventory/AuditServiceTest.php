@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Models\User;
+use App\Tenancy\TenantManager;
 use App\Modules\Inventory\Models\Warehouse;
 use App\Modules\Inventory\Services\Audit\AuditService;
 use App\Modules\Inventory\Services\InventoryEngine;
@@ -11,9 +12,10 @@ use App\Modules\Product\Models\AuditLog;
 use App\Modules\Product\Models\Product;
 
 beforeEach(function () {
-    $this->user = User::factory()->subscribed()->create();
+    $this->user = User::factory()->sharedSubscribed()->create();
 
     tenancy()->initialize($this->user->tenant);
+    app(TenantManager::class)->initialize($this->user->tenant);
 
     $this->product = Product::factory()->create();
     $this->fromWarehouse = Warehouse::factory()->create(['slug' => 'audit-from']);

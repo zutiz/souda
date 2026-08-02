@@ -125,6 +125,20 @@ class CafePack implements IndustryPack
         ];
     }
 
+    public function branding(): array
+    {
+        return [
+            'primary' => 'oklch(0.55 0.15 50)',      // Warm brown
+            'primary_foreground' => 'oklch(0.985 0 0)',
+            'accent' => 'oklch(0.95 0.08 60)',       // Cream
+            'accent_foreground' => 'oklch(0.205 0 0)',
+            'sidebar' => 'oklch(0.97 0.04 50)',
+            'sidebar_foreground' => 'oklch(0.205 0 0)',
+            'sidebar_accent' => 'oklch(0.92 0.06 50)',
+            'radius' => '0.625rem',
+        ];
+    }
+
     public function onTenantAssigned(Tenant $tenant): void {}
 
     public function onTenantRemoved(Tenant $tenant): void {}

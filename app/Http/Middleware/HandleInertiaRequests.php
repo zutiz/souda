@@ -61,6 +61,7 @@ class HandleInertiaRequests extends Middleware
             ],
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
             'tenant_config' => fn () => $this->resolveTenantConfig($request),
+            'tenantLogo' => fn () => $this->resolveTenantLogo($request),
             'currentTenant' => fn () => $this->resolveCurrentTenant($request),
             'tenants' => fn () => $this->resolveTenants($request),
             'businessTypes' => fn () => $this->resolveBusinessTypes(),
@@ -242,6 +243,7 @@ class HandleInertiaRequests extends Middleware
             return [
                 'business_type' => $config->businessType,
                 'modules' => $config->enabledModules,
+                'branding' => $config->branding,
             ];
         } catch (\Throwable $e) {
             Log::warning('Failed to resolve tenant config', [
@@ -252,5 +254,36 @@ class HandleInertiaRequests extends Middleware
 
             return null;
         }
+    }
+
+    protected function resolveTenantLogo(Request $request): ?string
+    {
+        try {
+            $config = app(TenantConfig::class);
+            $logoUrl = $config->getBrandLogoUrl();
+
+            if ($logoUrl !== null) {
+                // If it's a stored path, generate URL
+                if (! str_starts_with($logoUrl, 'http')) {
+                    return Storage::url($logoUrl);
+                }
+
+                return $logoUrl;
+            }
+        } catch (\Throwable) {
+            // Fallback to tenant logo
+        }
+
+        $manager = app(TenantManager::class);
+
+        if ($manager->initialized()) {
+            $tenant = $manager->current();
+
+            if ($tenant !== null && $tenant->logo) {
+                return Storage::url($tenant->logo);
+            }
+        }
+
+        return null;
     }
 }

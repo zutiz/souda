@@ -88,11 +88,28 @@ trait RefreshMultiDatabase
                 '--path' => 'app/Modules/Order/Database/Migrations/Tenant',
             ]);
 
+            Artisan::call('migrate', [
+                '--force' => true,
+                '--database' => 'shared',
+                '--path' => 'app/Modules/Inventory/Database/Migrations/Tenant',
+            ]);
+
             static::$migratedShared = true;
         }
 
-        DB::connection('shared')->table('tenant_settings')->truncate();
-        DB::connection('shared')->table('tasks')->truncate();
+        $tables = DB::connection('shared')->select('SHOW TABLES');
+        $names = array_map(
+            fn ($t) => reset($t),
+            $tables
+        );
+
+        $names = array_values(array_filter($names, fn (string $name) => $name !== 'migrations'));
+
+        DB::connection('shared')->statement('SET FOREIGN_KEY_CHECKS = 0');
+        foreach ($names as $table) {
+            DB::connection('shared')->table($table)->truncate();
+        }
+        DB::connection('shared')->statement('SET FOREIGN_KEY_CHECKS = 1');
     }
 
     protected function dropTenantDatabases(): void

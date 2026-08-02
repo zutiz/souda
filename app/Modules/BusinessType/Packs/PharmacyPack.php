@@ -262,6 +262,20 @@ class PharmacyPack implements IndustryPack
         ];
     }
 
+    public function branding(): array
+    {
+        return [
+            'primary' => 'oklch(0.55 0.20 250)',     // Medical blue
+            'primary_foreground' => 'oklch(0.985 0 0)',
+            'accent' => 'oklch(0.94 0.04 250)',      // Light blue
+            'accent_foreground' => 'oklch(0.205 0 0)',
+            'sidebar' => 'oklch(0.96 0.03 250)',
+            'sidebar_foreground' => 'oklch(0.205 0 0)',
+            'sidebar_accent' => 'oklch(0.90 0.05 250)',
+            'radius' => '0.5rem',                    // Clinical, clean
+        ];
+    }
+
     public function onTenantAssigned(Tenant $tenant): void {}
 
     public function onTenantRemoved(Tenant $tenant): void {}

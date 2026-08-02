@@ -8,11 +8,14 @@ use App\Modules\Inventory\Enums\MovementTypeEnum;
 use App\Modules\Product\Models\Product;
 use App\Modules\Product\Models\Variant;
 use App\Modules\Product\Models\Warehouse;
+use App\Tenancy\Models\Concerns\HasTenantScope;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class InventoryLedger extends Model
 {
+    use HasTenantScope;
+
     protected $table = 'inventory_ledger';
 
     public $timestamps = false;

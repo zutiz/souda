@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Models\User;
+use App\Tenancy\TenantManager;
 use App\Modules\Inventory\Events\InventoryBalanceUpdated;
 use App\Modules\Inventory\Events\StockMovementCreated;
 use App\Modules\Inventory\Models\InventoryBalance;
@@ -12,9 +13,10 @@ use App\Modules\Product\Models\Product;
 use App\Modules\Product\Models\Warehouse;
 
 beforeEach(function () {
-    $this->user = User::factory()->subscribed()->create();
+    $this->user = User::factory()->sharedSubscribed()->create();
 
     tenancy()->initialize($this->user->tenant);
+    app(TenantManager::class)->initialize($this->user->tenant);
 
     $this->product = Product::factory()->create();
     $this->warehouse = Warehouse::factory()->create();
@@ -83,7 +85,7 @@ test('getBalance returns zero for product with no stock', function () {
 });
 
 test('recordMovement dispatches StockMovementCreated event', function () {
-    Event::fake();
+    Event::fake([StockMovementCreated::class, InventoryBalanceUpdated::class]);
 
     $this->inventoryEngine->recordMovement(
         productId: $this->product->id,

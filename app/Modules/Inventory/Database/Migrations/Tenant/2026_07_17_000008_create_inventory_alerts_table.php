@@ -10,6 +10,7 @@ return new class extends Migration
     {
         Schema::create('inventory_alerts', function (Blueprint $table) {
             $table->id();
+            $table->string('tenant_id', 36);
             $table->foreignId('rule_id')->nullable()->constrained('inventory_rules')->nullOnDelete();
             $table->string('type');
             $table->string('title');

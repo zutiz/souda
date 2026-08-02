@@ -10,6 +10,7 @@ return new class extends Migration
     {
         Schema::create('inventory_purchase_suggestions', function (Blueprint $table) {
             $table->id();
+            $table->string('tenant_id', 36);
             $table->string('product_id', 36);
             $table->string('variant_id', 36)->nullable();
             $table->integer('warehouse_id');

@@ -126,18 +126,22 @@ Attributes let you create variant combinations (e.g., a t-shirt available in Red
 
 ## 5. Inventory & Stock
 
-The Inventory module helps you track stock levels across warehouses.
+The Inventory module helps you track stock levels across warehouses, including batch and serial-number tracking for industries that need it.
+
+### Warehouses
+
+Manage your locations at **Inventory > Warehouses**. Each warehouse has a name, slug, and type. Mark a warehouse as **default** to make it the primary stock location for new products.
 
 ### Stock Overview
 
 Navigate to **Inventory > Stock** to see current stock levels for all products. Each product shows:
 - Current quantity in each warehouse
 - Low stock indicators (products below minimum threshold are highlighted)
-- Stock value
+- Stock value and average unit cost
 
 ### Stock Movements
 
-Every stock change is logged for full traceability:
+Every stock change is logged in the inventory ledger for full traceability:
 
 | Movement Type | Description |
 |---------------|-------------|
@@ -156,11 +160,20 @@ Move stock between warehouses:
 1. Go to **Inventory > Stock Transfers**
 2. Select source and destination warehouses
 3. Choose products and quantities
-4. Complete the transfer — stock is moved automatically
+4. Complete the transfer — stock is moved automatically, and stock reservations are handled
 
-### Low Stock Alerts
+### Stock Counts
 
-Products below their minimum stock threshold appear in the low stock view. Restock them directly from this screen.
+Run periodic stocktakes at **Inventory > Counts**. Create a count for a warehouse, enter expected vs. counted quantities per item, and finalize to post adjustments to stock automatically.
+
+### Batches & Serial Numbers
+
+- **Batches** track stock by production/receipt batch (with optional expiry dates) for industries like pharmacy, bakery, and restaurant.
+- **Serial Numbers** track individual units end-to-end (received → sold) for industries like electronics, hardware, and cosmetics.
+
+### Low Stock Alerts & Rules
+
+Products below their minimum stock threshold appear in the low stock view. Restock them directly from this screen. Configure per-product rules (reorder points, suggested quantities) at **Inventory > Rules**; the module surfaces purchase suggestions based on demand forecasts.
 
 ---
 

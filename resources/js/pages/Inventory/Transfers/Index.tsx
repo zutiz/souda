@@ -49,7 +49,8 @@ export default function TransferIndex() {
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Transfers" />
 
-            <PageHeader title="Transfers" description="Stock transfers between warehouses">
+            <div className="flex h-full flex-1 flex-col gap-6 overflow-x-auto p-4 lg:p-6">
+                <PageHeader title="Transfers" description="Stock transfers between warehouses">
                 <Link href="/inventory/transfers/create">
                     <Button>New Transfer</Button>
                 </Link>
@@ -106,6 +107,7 @@ export default function TransferIndex() {
                 perPage={transfers.per_page}
                 total={transfers.total}
             />
+            </div>
         </AppLayout>
     );
 }

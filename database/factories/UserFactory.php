@@ -78,6 +78,16 @@ class UserFactory extends Factory
     }
 
     /**
+     * Indicate that the user's shared-mode tenant has an active subscription.
+     */
+    public function sharedSubscribed(): static
+    {
+        return $this->state(fn () => [
+            'tenant_id' => Tenant::factory()->shared()->subscribed(),
+        ]);
+    }
+
+    /**
      * Indicate that the user's tenant has a cancelled subscription (e.g. after deactivation + restore).
      */
     public function cancelledSubscription(): static

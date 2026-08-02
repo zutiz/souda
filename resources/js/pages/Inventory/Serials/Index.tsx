@@ -61,7 +61,8 @@ export default function SerialIndex() {
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Serial Numbers" />
 
-            <PageHeader title="Serial Numbers" description="Track individual units by serial number" />
+            <div className="flex h-full flex-1 flex-col gap-6 overflow-x-auto p-4 lg:p-6">
+                <PageHeader title="Serial Numbers" description="Track individual units by serial number" />
 
             <div className="mb-4 flex items-center gap-3">
                 <input
@@ -129,7 +130,14 @@ export default function SerialIndex() {
                 </table>
             </div>
 
-            <Pagination meta={serials} />
+            <Pagination
+                links={serials.links}
+                currentPage={serials.current_page}
+                lastPage={serials.last_page}
+                perPage={serials.per_page}
+                total={serials.total}
+            />
+            </div>
         </AppLayout>
     );
 }

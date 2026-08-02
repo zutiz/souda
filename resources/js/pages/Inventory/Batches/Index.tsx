@@ -65,7 +65,8 @@ export default function BatchIndex() {
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Batches" />
 
-            <PageHeader title="Batches" description="Manage batch/lot inventory tracking" />
+            <div className="flex h-full flex-1 flex-col gap-6 overflow-x-auto p-4 lg:p-6">
+                <PageHeader title="Batches" description="Manage batch/lot inventory tracking" />
 
             <div className="mb-4 flex items-center gap-3">
                 <input
@@ -131,7 +132,14 @@ export default function BatchIndex() {
                 </table>
             </div>
 
-            <Pagination meta={batches} />
+            <Pagination
+                links={batches.links}
+                currentPage={batches.current_page}
+                lastPage={batches.last_page}
+                perPage={batches.per_page}
+                total={batches.total}
+            />
+            </div>
         </AppLayout>
     );
 }

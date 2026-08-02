@@ -112,7 +112,8 @@ export default function SuggestionIndex() {
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Purchase Suggestions" />
 
-            <PageHeader title="Purchase Suggestions" description="Auto-generated reorder suggestions based on stock levels">
+            <div className="flex h-full flex-1 flex-col gap-6 overflow-x-auto p-4 lg:p-6">
+                <PageHeader title="Purchase Suggestions" description="Auto-generated reorder suggestions based on stock levels">
                 <Button onClick={() => router.post('/inventory/suggestions/generate')}>
                     Regenerate Suggestions
                 </Button>
@@ -226,6 +227,7 @@ export default function SuggestionIndex() {
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
+            </div>
         </AppLayout>
     );
 }

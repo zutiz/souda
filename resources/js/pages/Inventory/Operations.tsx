@@ -63,10 +63,11 @@ export default function OperationsIndex() {
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Inventory Operations" />
 
-            <PageHeader
-                title="Operations"
-                description="Monitor and manually trigger scheduled inventory tasks"
-            />
+            <div className="flex h-full flex-1 flex-col gap-6 overflow-x-auto p-4 lg:p-6">
+                <PageHeader
+                    title="Operations"
+                    description="Monitor and manually trigger scheduled inventory tasks"
+                />
 
             <div className="rounded-lg border border-sidebar-border">
                 <table className="w-full">
@@ -103,6 +104,7 @@ export default function OperationsIndex() {
                         ))}
                     </tbody>
                 </table>
+            </div>
             </div>
         </AppLayout>
     );

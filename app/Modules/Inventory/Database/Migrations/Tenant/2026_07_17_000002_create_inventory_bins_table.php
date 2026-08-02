@@ -12,6 +12,7 @@ return new class extends Migration
     {
         Schema::create('inventory_bins', function (Blueprint $table) {
             $table->id();
+            $table->string('tenant_id', 36);
             $table->unsignedBigInteger('warehouse_id');
             $table->string('code', 50);
             $table->string('zone', 100)->nullable();

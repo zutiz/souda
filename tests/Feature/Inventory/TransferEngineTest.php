@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Models\User;
+use App\Tenancy\TenantManager;
 use App\Modules\Inventory\Enums\TransferStatusEnum;
 use App\Modules\Inventory\Events\TransferCancelled;
 use App\Modules\Inventory\Events\TransferCompleted;
@@ -19,9 +20,10 @@ use App\Modules\Inventory\Services\TransferEngine;
 use App\Modules\Product\Models\Product;
 
 beforeEach(function () {
-    $this->user = User::factory()->subscribed()->create();
+    $this->user = User::factory()->sharedSubscribed()->create();
 
     tenancy()->initialize($this->user->tenant);
+    app(TenantManager::class)->initialize($this->user->tenant);
 
     $this->product = Product::factory()->create();
     $this->productB = Product::factory()->create();
@@ -104,7 +106,7 @@ test('initiate throws on insufficient stock', function () {
 });
 
 test('initiate dispatches TransferInitiated event', function () {
-    Event::fake();
+    Event::fake([TransferInitiated::class]);
 
     $this->transferEngine->initiate(
         fromWarehouseId: $this->fromWarehouse->id,
@@ -209,7 +211,7 @@ test('receive records transfer_in movement on destination warehouse', function (
 });
 
 test('receive dispatches TransferCompleted event', function () {
-    Event::fake();
+    Event::fake([TransferCompleted::class]);
 
     $transfer = $this->transferEngine->initiate(
         fromWarehouseId: $this->fromWarehouse->id,
@@ -288,7 +290,7 @@ test('cancel returns stock on in-transit transfer', function () {
 });
 
 test('cancel dispatches TransferCancelled event', function () {
-    Event::fake();
+    Event::fake([TransferCancelled::class]);
 
     $transfer = $this->transferEngine->initiate(
         fromWarehouseId: $this->fromWarehouse->id,

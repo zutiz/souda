@@ -251,10 +251,15 @@ class ShipmentService
         return $this->toDTO($shipment);
     }
 
-    public function listShipments(string $orderId): array
+    public function listShipments(?string $orderId = null): array
     {
-        return Shipment::with(['items'])
-            ->where('order_id', $orderId)
+        $query = Shipment::with(['items']);
+
+        if (! empty($orderId)) {
+            $query->where('order_id', $orderId);
+        }
+
+        return $query
             ->orderBy('created_at', 'desc')
             ->get()
             ->map(fn (Shipment $shipment) => $this->toDTO($shipment))

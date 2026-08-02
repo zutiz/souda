@@ -140,6 +140,20 @@ class WholesalePack implements IndustryPack
         ];
     }
 
+    public function branding(): array
+    {
+        return [
+            'primary' => 'oklch(0.35 0.08 250)',     // Navy business
+            'primary_foreground' => 'oklch(0.985 0 0)',
+            'accent' => 'oklch(0.55 0.04 250)',      // Slate
+            'accent_foreground' => 'oklch(0.985 0 0)',
+            'sidebar' => 'oklch(0.20 0 0)',
+            'sidebar_foreground' => 'oklch(0.985 0 0)',
+            'sidebar_accent' => 'oklch(0.30 0.06 250)',
+            'radius' => '0.5rem',                    // Professional
+        ];
+    }
+
     public function onTenantAssigned(Tenant $tenant): void {}
 
     public function onTenantRemoved(Tenant $tenant): void {}

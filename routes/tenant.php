@@ -209,7 +209,12 @@ Route::middleware([
         return Inertia::render('dashboard');
     })->name('store.dashboard');
 
-    // Order module routes
+    // Order module routes (store-specific)
+    require __DIR__.'/order.php';
+});
+
+// === Order routes (no store prefix) ===
+Route::middleware(['web', 'auth', InitializeTenancyByUser::class, 'subscription'])->group(function () {
     require __DIR__.'/order.php';
 });
 

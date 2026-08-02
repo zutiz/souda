@@ -114,6 +114,20 @@ class CosmeticsPack implements IndustryPack
         ];
     }
 
+    public function branding(): array
+    {
+        return [
+            'primary' => 'oklch(0.65 0.14 340)',     // Soft pink
+            'primary_foreground' => 'oklch(0.985 0 0)',
+            'accent' => 'oklch(0.92 0.05 340)',      // Rose light
+            'accent_foreground' => 'oklch(0.205 0 0)',
+            'sidebar' => 'oklch(0.96 0.03 340)',
+            'sidebar_foreground' => 'oklch(0.205 0 0)',
+            'sidebar_accent' => 'oklch(0.88 0.06 340)',
+            'radius' => '0.875rem',                  // Soft, feminine
+        ];
+    }
+
     public function onTenantAssigned(Tenant $tenant): void {}
 
     public function onTenantRemoved(Tenant $tenant): void {}

@@ -10,6 +10,7 @@ use App\Modules\Order\Services\RefundService;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Inertia\Inertia;
 
 class RefundController
 {
@@ -18,6 +19,18 @@ class RefundController
     public function __construct(
         protected RefundService $refundService,
     ) {}
+
+    public function index(Request $request)
+    {
+        $refunds = Order::query()
+            ->where('status', 'refunded')
+            ->orderBy('updated_at', 'desc')
+            ->paginate(20);
+
+        return Inertia::render('Order/Refunds/Index', [
+            'refunds' => $refunds,
+        ]);
+    }
 
     public function refund(Request $request, Order $order): RedirectResponse
     {

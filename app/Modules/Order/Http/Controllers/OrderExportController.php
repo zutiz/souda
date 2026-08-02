@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Order\Http\Controllers;
 
 use App\Modules\Order\Models\Order;
+use App\Modules\Store\Models\Store;
 use App\Modules\Store\Services\StoreContextManager;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -18,7 +19,17 @@ class OrderExportController
     public function csv(Request $request): Response
     {
         $storeId = $this->storeContext->id();
-        $query = Order::with('items')->where('store_id', $storeId);
+
+        if ($storeId === null) {
+            $defaultStore = Store::query()->default()->first();
+            $storeId = $defaultStore?->id ?? '';
+        }
+
+        $query = Order::with('items');
+
+        if (! empty($storeId)) {
+            $query->where('store_id', $storeId);
+        }
 
         if ($request->filled('status')) {
             $query->where('status', $request->input('status'));

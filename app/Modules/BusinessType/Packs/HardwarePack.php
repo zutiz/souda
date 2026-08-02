@@ -120,6 +120,20 @@ class HardwarePack implements IndustryPack
         ];
     }
 
+    public function branding(): array
+    {
+        return [
+            'primary' => 'oklch(0.60 0.15 25)',      // Industrial orange
+            'primary_foreground' => 'oklch(0.985 0 0)',
+            'accent' => 'oklch(0.50 0.02 0)',        // Steel gray
+            'accent_foreground' => 'oklch(0.985 0 0)',
+            'sidebar' => 'oklch(0.25 0 0)',
+            'sidebar_foreground' => 'oklch(0.985 0 0)',
+            'sidebar_accent' => 'oklch(0.40 0.04 25)',
+            'radius' => '0.5rem',                    // Standard, industrial
+        ];
+    }
+
     public function onTenantAssigned(Tenant $tenant): void {}
 
     public function onTenantRemoved(Tenant $tenant): void {}
